@@ -463,14 +463,18 @@ function renderCanvas(
     const topMargin = (h - totalHeight) / 2;
     const cy = Math.round(topMargin + (logoImg ? logoH + logoSpacing : 0) + r);
 
-    if (logoImg) {
+        if (logoImg) {
       ctx.save();
       // Apply black color for white theme
       const prevFilter = ctx.filter;
       if (theme.id === "white") {
         ctx.filter = "brightness(0)";
       }
+      // Enable high‑quality image smoothing for better logo appearance
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
       ctx.drawImage(logoImg, cx - logoW / 2, cy - r - logoH - logoSpacing, logoW, logoH);
+      // Restore filter (save/restore also restores smoothing settings)
       ctx.filter = prevFilter;
       ctx.restore();
     }
