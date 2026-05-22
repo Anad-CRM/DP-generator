@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { AppShell } from "@/components/app-shell";
-import { StudioEditor } from "@/components/studio-editor";
+import StudioEditor from "@/components/studio-editor";
 
 export default function EditorPage() {
   return (
