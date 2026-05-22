@@ -24,6 +24,7 @@ const THEMES = [
   { id: "rose", name: "Rose", bg: ["#1a0010", "#9d174d", "#ec4899"], accent: "#f9a8d4", glow: "#ec4899" },
   { id: "teal", name: "Teal", bg: ["#001a1f", "#0e7490", "#22d3ee"], accent: "#67e8f9", glow: "#06b6d4" },
   { id: "gold", name: "Gold", bg: ["#1a1000", "#78350f", "#f59e0b"], accent: "#fde68a", glow: "#f59e0b" },
+  { id: "white", name: "White", bg: ["#ffffff", "#ffffff", "#f0f0f0"], accent: "#000000", glow: "#111111" },
 ];
 
 const FRAME_STYLES = [
@@ -451,9 +452,9 @@ function renderCanvas(
     const hasStats = stats && stats.some(s => s.value);
     if (hasStats) deltaY += 66;
 
-    let logoW = 0, logoH = 0, logoSpacing = 32;
+    let logoW = 0, logoH = 0, logoSpacing = 60;
     if (logoImg) {
-      logoW = Math.round(r * 0.8);
+      logoW = Math.round(r * 1.0);
       logoH = logoImg.naturalHeight * (logoW / logoImg.naturalWidth);
     }
 
@@ -464,8 +465,13 @@ function renderCanvas(
 
     if (logoImg) {
       ctx.save();
-      ctx.globalAlpha = 0.7;
+      // Apply black color for white theme
+      const prevFilter = ctx.filter;
+      if (theme.id === "white") {
+        ctx.filter = "brightness(0)";
+      }
       ctx.drawImage(logoImg, cx - logoW / 2, cy - r - logoH - logoSpacing, logoW, logoH);
+      ctx.filter = prevFilter;
       ctx.restore();
     }
 
@@ -500,7 +506,7 @@ function renderCanvas(
     ctx.textAlign = "center";
     ctx.font = `500 ${roleFontSize}px 'Inter', 'Segoe UI', system-ui`;
     const pillW = Math.min(ctx.measureText(role).width + 44, w * 0.74);
-    const pillY = nameY + 14;
+    const pillY = nameY + 24;
     rrect(ctx, w / 2 - pillW / 2, pillY, pillW, pillH, pillH / 2);
     ctx.fillStyle = "rgba(255,255,255,0.11)";
     ctx.fill();
