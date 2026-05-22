@@ -54,8 +54,8 @@ const BADGE_PRESETS = [
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Format = { w: number; h: number; id: string; [key: string]: any };
-type Theme = { accent: string; bg: string[]; [key: string]: any };
+type Format = { w: number; h: number; id: string;[key: string]: any };
+type Theme = { accent: string; bg: string[];[key: string]: any };
 type Transform = { scale: number; x: number; y: number; rotate: number };
 type SocialHandle = { icon: string; label: string; value: string };
 type Stat = { label: string; value: string };
