@@ -367,6 +367,7 @@ function renderCanvas(
   fmt: Format,
   theme: Theme,
   photo: HTMLImageElement | null,
+  logoImg: HTMLImageElement | null,
   name: string,
   role: string,
   textColor: string,
@@ -398,6 +399,16 @@ function renderCanvas(
 
     const tx = cx + r + 44;
     const nameFontSize = Math.round(h * (fmt.id === "linkedin" ? 0.22 : 0.14));
+
+    if (logoImg) {
+      ctx.save();
+      ctx.globalAlpha = 0.9;
+      const logoW = Math.round(r * 0.8);
+      const logoH = logoImg.naturalHeight * (logoW / logoImg.naturalWidth);
+      ctx.drawImage(logoImg, cx - logoW / 2, cy - r - logoH - 32, logoW, logoH);
+      ctx.restore();
+    }
+
     ctx.save();
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
@@ -426,7 +437,37 @@ function renderCanvas(
     const isStory = fmt.id === "story";
     const r = Math.round(Math.min(w, h) * (isStory ? 0.23 : 0.22));
     const cx = Math.round(w / 2);
-    const cy = Math.round(h * 0.29);
+
+    // Calculate total layout height to center it vertically
+    const nameFontSize = Math.round(w * (isStory ? 0.072 : 0.062));
+    const roleFontSize = Math.round(nameFontSize * 0.4);
+    const pillH = Math.round(roleFontSize * 2.2);
+
+    let deltaY = r + 30 + nameFontSize + 10 + 14 + pillH + 16;
+    if (badge) deltaY += 38;
+    if (tagline) deltaY += 34;
+    const hasSocial = socialHandles && socialHandles.some(s => s.value);
+    if (hasSocial) deltaY += 40;
+    const hasStats = stats && stats.some(s => s.value);
+    if (hasStats) deltaY += 66;
+
+    let logoW = 0, logoH = 0, logoSpacing = 32;
+    if (logoImg) {
+      logoW = Math.round(r * 0.8);
+      logoH = logoImg.naturalHeight * (logoW / logoImg.naturalWidth);
+    }
+
+    // Include logo height in vertical centering
+    const totalHeight = deltaY + r + (logoImg ? logoH + logoSpacing : 0);
+    const topMargin = (h - totalHeight) / 2;
+    const cy = Math.round(topMargin + (logoImg ? logoH + logoSpacing : 0) + r);
+
+    if (logoImg) {
+      ctx.save();
+      ctx.globalAlpha = 0.7;
+      ctx.drawImage(logoImg, cx - logoW / 2, cy - r - logoH - logoSpacing, logoW, logoH);
+      ctx.restore();
+    }
 
     drawPhotoFrame(ctx, cx, cy, r, frame, theme);
     drawPhoto(ctx, photo, cx, cy, r, tf, frame);
@@ -442,7 +483,6 @@ function renderCanvas(
     ctx.stroke();
     ctx.restore();
 
-    const nameFontSize = Math.round(w * (isStory ? 0.072 : 0.062));
     const nameY = divY + nameFontSize + 10;
 
     ctx.save();
@@ -456,11 +496,9 @@ function renderCanvas(
     ctx.shadowBlur = 0;
     ctx.restore();
 
-    const roleFontSize = Math.round(nameFontSize * 0.4);
     ctx.save();
     ctx.textAlign = "center";
     ctx.font = `500 ${roleFontSize}px 'Inter', 'Segoe UI', system-ui`;
-    const pillH = Math.round(roleFontSize * 2.2);
     const pillW = Math.min(ctx.measureText(role).width + 44, w * 0.74);
     const pillY = nameY + 14;
     rrect(ctx, w / 2 - pillW / 2, pillY, pillW, pillH, pillH / 2);
@@ -575,6 +613,14 @@ export default function ProfileCardMaker() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const photoRef = useRef<HTMLImageElement | null>(null);
 
+  const [logoImg, setLogoImg] = useState<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    const img = new Image();
+    img.src = "/aibi_logo.png";
+    img.onload = () => setLogoImg(img);
+  }, []);
+
   const [fmt, setFmt] = useState(FORMATS[0]);
   const [theme, setTheme] = useState(THEMES[0]);
   const [name, setName] = useState("Your Name");
@@ -601,8 +647,8 @@ export default function ProfileCardMaker() {
 
   const draw = useCallback(() => {
     if (!canvasRef.current) return;
-    renderCanvas(canvasRef.current, fmt, theme, photoRef.current, name, role, textColor, tf, frame, bgPattern, badge, socialHandles, stats, showWatermark, tagline);
-  }, [fmt, theme, name, role, textColor, tf, frame, bgPattern, badge, socialHandles, stats, showWatermark, tagline]);
+    renderCanvas(canvasRef.current, fmt, theme, photoRef.current, logoImg, name, role, textColor, tf, frame, bgPattern, badge, socialHandles, stats, showWatermark, tagline);
+  }, [fmt, theme, name, role, textColor, tf, frame, bgPattern, badge, socialHandles, stats, showWatermark, tagline, logoImg]);
 
   useEffect(() => { draw(); }, [draw]);
 
@@ -620,7 +666,7 @@ export default function ProfileCardMaker() {
 
   function download(dlFmt: Format) {
     const tmp = document.createElement("canvas");
-    renderCanvas(tmp, dlFmt, theme, photoRef.current, name, role, textColor, tf, frame, bgPattern, badge, socialHandles, stats, showWatermark, tagline);
+    renderCanvas(tmp, dlFmt, theme, photoRef.current, logoImg, name, role, textColor, tf, frame, bgPattern, badge, socialHandles, stats, showWatermark, tagline);
     const a = document.createElement("a");
     a.download = `${(name || "profile").replace(/\s+/g, "-").toLowerCase()}-${dlFmt.id}.png`;
     a.href = tmp.toDataURL("image/png");
