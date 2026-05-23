@@ -621,9 +621,27 @@ function TabBtn({ active, onClick, children }: {
 
 export default function ProfileCardMaker() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const photoRef = useRef<HTMLImageElement | null>(null);
-
+  const [scale, setScale] = useState(1);
   const [logoImg, setLogoImg] = useState<HTMLImageElement | null>(null);
+
+  const [fmt, setFmt] = useState(FORMATS[0]);
+
+  // Update scale based on container width
+  useEffect(() => {
+    const updateScale = () => {
+      if (containerRef.current) {
+        const containerWidth = containerRef.current.clientWidth;
+        const baseWidth = fmt.w;
+        const newScale = Math.min(containerWidth / baseWidth, 1);
+        setScale(newScale);
+      }
+    };
+    updateScale();
+    window.addEventListener('resize', updateScale);
+    return () => window.removeEventListener('resize', updateScale);
+  }, [fmt]);
 
   useEffect(() => {
     const img = new Image();
@@ -631,7 +649,7 @@ export default function ProfileCardMaker() {
     img.onload = () => setLogoImg(img);
   }, []);
 
-  const [fmt, setFmt] = useState(FORMATS[0]);
+
   const [theme, setTheme] = useState(THEMES[0]);
   const [name, setName] = useState("Your Name");
   const [role, setRole] = useState("Community Member");
@@ -657,8 +675,14 @@ export default function ProfileCardMaker() {
 
   const draw = useCallback(() => {
     if (!canvasRef.current) return;
-    renderCanvas(canvasRef.current, fmt, theme, photoRef.current, logoImg, name, role, textColor, tf, frame, bgPattern, badge, socialHandles, stats, showWatermark, tagline);
-  }, [fmt, theme, name, role, textColor, tf, frame, bgPattern, badge, socialHandles, stats, showWatermark, tagline, logoImg]);
+    // Scale format dimensions for high‑DPI rendering
+    const scaledFmt = {
+      ...fmt,
+      w: Math.round(fmt.w * scale),
+      h: Math.round(fmt.h * scale),
+    };
+    renderCanvas(canvasRef.current, scaledFmt, theme, photoRef.current, logoImg, name, role, textColor, tf, frame, bgPattern, badge, socialHandles, stats, showWatermark, tagline);
+  }, [fmt, theme, name, role, textColor, tf, frame, bgPattern, badge, socialHandles, stats, showWatermark, tagline, logoImg, scale]);
 
   useEffect(() => { draw(); }, [draw]);
 
@@ -702,7 +726,7 @@ export default function ProfileCardMaker() {
   };
 
   return (
-    <div style={{ background: "radial-gradient(circle at 50% 0%, #151522 0%, #040406 100%)", minHeight: "100vh", color: "#fff", fontFamily: "'Inter', 'Outfit', 'Inter', 'Segoe UI', system-ui, sans-serif" }}>
+    <div ref={containerRef} style={{ background: "radial-gradient(circle at 50% 0%, #151522 0%, #040406 100%)", minHeight: "100vh", color: "#fff", fontFamily: "'Inter', 'Outfit', 'Inter', 'Segoe UI', system-ui, sans-serif" }}>
       <style>{`
         * { box-sizing: border-box; }
         ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
