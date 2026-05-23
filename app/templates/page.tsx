@@ -112,7 +112,7 @@ export default function TemplatesPage() {
                   </div>
                 </Link>
               );
-            })}
+            })} 
           </div>
         </main>
       </div>
