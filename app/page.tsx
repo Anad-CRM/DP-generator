@@ -1,142 +1,196 @@
 import Link from "next/link";
-import { ArrowRight, Sparkles, UploadCloud, Palette, Download, Type, Star } from "lucide-react";
+import {
+  ArrowRight,
+  UploadCloud,
+  Palette,
+  Download,
+  ImageIcon,
+  Trophy,
+  Sparkles,
+} from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { HeroPreview } from "@/components/hero-preview";
-import { FeatureBand } from "@/components/feature-band";
 
-const logos = ["OrbitAI", "Nova Campus", "FounderX", "Pixel Guild", "LaunchLab"];
+const steps = [
+  {
+    icon: UploadCloud,
+    step: "1",
+    title: "Upload your photo",
+    body: "Choose a clear photo of yourself — portrait or square works best.",
+  },
+  {
+    icon: Palette,
+    step: "2",
+    title: "Pick a template",
+    body: "Select from curated gradient backgrounds with your brand's style.",
+  },
+  {
+    icon: ImageIcon,
+    step: "3",
+    title: "Add your name",
+    body: "Type your name, pick a font, and position it exactly where you want.",
+  },
+  {
+    icon: Download,
+    step: "4",
+    title: "Download HD PNG",
+    body: "Get a crisp, ready-to-use profile picture in seconds.",
+  },
+];
+
+const tools = [
+  {
+    icon: Sparkles,
+    href: "/editor",
+    label: "Profile DP Maker",
+    desc: "Upload a photo, pick a gradient template, add your name — download a branded profile picture instantly.",
+    cta: "Open Editor",
+    color: "from-violet-600 to-fuchsia-600",
+    glow: "rgba(139,92,246,0.4)",
+  },
+  {
+    icon: Trophy,
+    href: "/top-performer",
+    label: "🏆 Top Performer Cards",
+    desc: "Celebrate star performers of the week, month or year with 4 stunning, shareable award card templates.",
+    cta: "Create Award Card",
+    color: "from-amber-500 to-orange-500",
+    glow: "rgba(245,158,11,0.4)",
+  },
+];
 
 export default function LandingPage() {
   return (
     <AppShell>
       {/* ── Hero ── */}
-      <section className="relative mx-auto grid min-h-[calc(100vh-88px)] w-full max-w-7xl grid-cols-1 items-center gap-12 px-4 pb-20 pt-10 md:grid-cols-[1fr_1fr] md:px-6 lg:px-8">
-
-        {/* Ambient background glow */}
-        <div className="pointer-events-none absolute left-1/4 top-1/4 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-600/10 blur-[120px]" />
-        <div className="pointer-events-none absolute right-0 top-0 h-72 w-72 rounded-full bg-cyan-500/8 blur-[100px]" />
-
-        {/* Left – Copy */}
-        <div className="relative z-10 flex flex-col">
-
-          {/* Eyebrow pill */}
-          <div className="mb-7 inline-flex w-fit items-center gap-2.5 rounded-full border border-violet-400/25 bg-violet-500/10 px-4 py-2 text-sm text-violet-300 backdrop-blur-sm">
-            <Sparkles size={14} className="text-violet-300" />
-            <span className="font-semibold tracking-wide">Instant branded profile pictures</span>
-          </div>
-
-          {/* Headline */}
-          <h1 className="mb-5 text-5xl font-extrabold leading-[.94] tracking-tight text-white md:text-6xl lg:text-7xl">
-            Your Brand,
-            <br />
-            <span className="bg-gradient-to-r from-violet-400 via-fuchsia-400 to-cyan-400 bg-clip-text text-transparent">
-              Your Identity
-            </span>
-          </h1>
-
-          {/* Sub-copy */}
-          <p className="mb-8 max-w-lg text-lg leading-relaxed text-white/60">
-            Upload a photo, pick a stunning gradient template, personalise with your name — and download a crisp social-media-ready branded DP in seconds.
-          </p>
-
-          {/* CTA buttons */}
-          <div className="mb-10 flex flex-wrap gap-3">
-            <Link
-              href="/editor"
-              className="group inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-6 py-3.5 font-semibold text-white shadow-[0_4px_24px_rgba(139,92,246,0.45)] transition-all duration-300 hover:scale-[1.03] hover:shadow-[0_6px_32px_rgba(139,92,246,0.65)]"
-            >
-              Open Editor
-              <ArrowRight size={17} className="transition-transform duration-300 group-hover:translate-x-1" />
-            </Link>
-            <Link
-              href="/templates"
-              className="inline-flex items-center gap-2 rounded-xl border border-white/12 bg-white/6 px-6 py-3.5 font-semibold text-white/80 backdrop-blur-sm transition-all duration-300 hover:border-white/20 hover:bg-white/10 hover:text-white"
-            >
-              Browse Templates
-            </Link>
-          </div>
-
-          {/* Trust row */}
-          <div className="flex items-center gap-3 text-sm text-white/40">
-            <div className="flex -space-x-2">
-              {["V", "A", "M", "J"].map((l, i) => (
-                <div
-                  key={i}
-                  className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-[#0f0c29] bg-gradient-to-br from-violet-500 to-fuchsia-600 text-xs font-bold text-white"
-                >
-                  {l}
-                </div>
-              ))}
-            </div>
-            <span>Loved by <span className="font-semibold text-white/70">1,200+ creators</span></span>
-          </div>
-
-          {/* Stats */}
-          <div className="mt-8 grid max-w-sm grid-cols-3 gap-3 text-sm">
-            <Stat value="7+" label="Templates" />
-            <Stat value="HD" label="PNG Export" />
-            <Stat value="∞" label="Variations" />
-          </div>
+      <section className="relative mx-auto flex min-h-[calc(100vh-88px)] max-w-3xl flex-col items-center justify-center gap-6 px-5 py-20 text-center">
+        {/* Soft glow */}
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div className="h-[440px] w-[440px] rounded-full bg-violet-600/15 blur-[110px]" />
         </div>
 
-        {/* Right – Live preview card */}
-        <div className="relative z-10 flex items-center justify-center">
-          <HeroPreview />
+        {/* Badge */}
+        <div className="relative inline-flex items-center gap-2 rounded-full border border-violet-400/30 bg-violet-500/10 px-4 py-1.5 text-sm font-medium text-violet-300">
+          <span className="inline-block h-2 w-2 rounded-full bg-violet-400" />
+          Free · No sign-up needed · 2 powerful tools
         </div>
+
+        {/* Headline */}
+        <h1 className="relative text-4xl font-extrabold leading-tight tracking-tight text-white sm:text-5xl md:text-6xl">
+          Create beautiful{" "}
+          <span className="bg-gradient-to-r from-violet-400 via-fuchsia-400 to-cyan-400 bg-clip-text text-transparent">
+            profile cards
+          </span>{" "}
+          in seconds
+        </h1>
+
+        {/* Sub-copy */}
+        <p className="relative max-w-xl text-base leading-relaxed text-white/55 sm:text-lg">
+          Make branded profile DPs or stunning award cards for top performers —
+          upload a photo, pick a template, download instantly. No design skills required.
+        </p>
+
+        {/* CTAs */}
+        <div className="relative mt-2 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+          <Link
+            href="/editor"
+            className="group inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-7 py-3.5 text-base font-semibold text-white shadow-[0_4px_28px_rgba(139,92,246,0.45)] transition-all duration-200 hover:scale-[1.03] hover:shadow-[0_6px_36px_rgba(139,92,246,0.65)]"
+          >
+            Make my DP
+            <ArrowRight size={17} className="transition-transform duration-200 group-hover:translate-x-1" />
+          </Link>
+          <Link
+            href="/top-performer"
+            className="group inline-flex items-center gap-2 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-7 py-3.5 text-base font-semibold text-amber-300 transition-all duration-200 hover:bg-amber-500/20 hover:text-amber-200"
+          >
+            🏆 Award Cards
+            <ArrowRight size={15} className="transition-transform duration-200 group-hover:translate-x-1" />
+          </Link>
+        </div>
+
+        {/* Trust line */}
+        <p className="relative text-xs text-white/30">
+          Loved by <span className="font-medium text-white/55">1,200+ creators</span> · HD PNG export · 7+ templates
+        </p>
       </section>
 
-      {/* ── Logo marquee ── */}
-      <section className="relative overflow-hidden border-y border-white/8 bg-white/[.03] py-5">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-12 gap-y-4 px-4">
-          {logos.map((logo) => (
-            <span
-              key={logo}
-              className="text-xs font-bold uppercase tracking-[.2em] text-white/30 transition hover:text-white/60"
+      {/* ── Tools Section ── */}
+      <section className="mx-auto max-w-4xl px-5 pb-16">
+        <div className="mb-10 text-center">
+          <p className="text-xs font-semibold uppercase tracking-widest text-fuchsia-400">
+            What you can make
+          </p>
+          <h2 className="mt-2 text-2xl font-bold text-white sm:text-3xl">
+            Two tools, endless possibilities
+          </h2>
+        </div>
+
+        <div className="grid gap-5 sm:grid-cols-2">
+          {tools.map(({ icon: Icon, href, label, desc, cta, color, glow }) => (
+            <div
+              key={href}
+              className="glass flex flex-col gap-5 rounded-2xl p-6 transition-all duration-200 hover:-translate-y-1"
             >
-              {logo}
-            </span>
+              <div className={`grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br ${color}`}>
+                <Icon size={22} className="text-white" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">{label}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-white/50">{desc}</p>
+              </div>
+              <Link
+                href={href}
+                className="group mt-auto inline-flex w-fit items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white/70 transition-all duration-200 hover:border-white/20 hover:bg-white/10 hover:text-white"
+              >
+                {cta}
+                <ArrowRight size={14} className="transition-transform duration-200 group-hover:translate-x-1" />
+              </Link>
+            </div>
           ))}
         </div>
       </section>
 
-      {/* ── Features ── */}
-      <FeatureBand
-        eyebrow="Simple workflow"
-        title="Everything needed for clean branded profile posters."
-        features={[
-          { icon: UploadCloud, title: "Photo upload", body: "Place and resize a profile photo directly on the canvas." },
-          { icon: Palette, title: "Fixed templates", body: "Choose modern neon backgrounds with circular brand shapes." },
-          { icon: Type, title: "Editable name", body: "Change name, font, color, and position without complex tools." },
-          { icon: Download, title: "PNG export", body: "Download a crisp square profile poster instantly." },
-        ]}
-      />
+      {/* ── How it works ── */}
+      <section className="mx-auto max-w-4xl px-5 pb-24">
+        <div className="mb-10 text-center">
+          <p className="text-xs font-semibold uppercase tracking-widest text-fuchsia-400">
+            How it works
+          </p>
+          <h2 className="mt-2 text-2xl font-bold text-white sm:text-3xl">
+            Four simple steps
+          </h2>
+        </div>
 
-      {/* ── Social proof callout ── */}
-      <section className="mx-auto max-w-4xl px-4 py-20 text-center md:px-6">
-        <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-violet-600/20 via-fuchsia-600/10 to-cyan-600/10 p-10 shadow-2xl backdrop-blur-sm">
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-violet-600/5 to-transparent" />
-          <div className="relative z-10">
-            <div className="mb-4 flex justify-center gap-1">
-              {[1,2,3,4,5].map((i) => (
-                <Star key={i} size={18} className="fill-yellow-400 text-yellow-400" />
-              ))}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {steps.map(({ icon: Icon, step, title, body }) => (
+            <div
+              key={step}
+              className="glass flex flex-col gap-4 rounded-2xl p-6 transition-all duration-200 hover:-translate-y-1"
+            >
+              <div className="flex items-center justify-between">
+                <div className="grid h-10 w-10 place-items-center rounded-xl bg-violet-500/15">
+                  <Icon size={20} className="text-violet-300" />
+                </div>
+                <span className="text-3xl font-extrabold text-white/10">{step}</span>
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white">{title}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-white/50">{body}</p>
+              </div>
             </div>
-            <blockquote className="mb-4 text-lg font-medium leading-relaxed text-white/80">
-              "BrandDP Studio saved us hours of Photoshop work. Our entire team now has matching branded profile pictures in minutes."
-            </blockquote>
-            <p className="text-sm font-semibold text-violet-300">— Sarah K., Community Manager at FounderX</p>
-          </div>
+          ))}
+        </div>
+
+        {/* CTA */}
+        <div className="mt-10 text-center">
+          <Link
+            href="/editor"
+            className="group inline-flex items-center gap-2 rounded-xl border border-violet-400/25 bg-violet-500/10 px-6 py-3 text-sm font-semibold text-violet-300 transition-all duration-200 hover:bg-violet-500/20 hover:text-violet-200"
+          >
+            Open the editor
+            <ArrowRight size={15} className="transition-transform duration-200 group-hover:translate-x-1" />
+          </Link>
         </div>
       </section>
     </AppShell>
-  );
-}
-
-function Stat({ value, label }: { value: string; label: string }) {
-  return (
-    <div className="flex flex-col items-start rounded-2xl border border-white/8 bg-white/[.045] p-4 backdrop-blur-sm">
-      <div className="text-2xl font-extrabold text-white">{value}</div>
-      <div className="mt-0.5 text-xs font-medium text-white/45">{label}</div>
-    </div>
   );
 }

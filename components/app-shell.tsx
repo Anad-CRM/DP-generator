@@ -3,7 +3,8 @@ import { Sparkles } from "lucide-react";
 
 const nav = [
   ["Templates", "/templates"],
-  ["Editor", "/editor"]
+  ["Editor", "/editor"],
+  ["🏆 Awards", "/top-performer"],
 ];
 
 export function AppShell({ children, compact = false }: { children: React.ReactNode; compact?: boolean }) {
@@ -15,7 +16,7 @@ export function AppShell({ children, compact = false }: { children: React.ReactN
             <span className="grid h-10 w-10 place-items-center rounded-2xl bg-white text-ink shadow-neon">
               <Sparkles size={20} />
             </span>
-            <span className="text-lg font-extrabold text-white">BrandDP</span>
+            <span className="text-lg font-extrabold text-white">TemplateStudio</span>
           </Link>
           <nav className="hidden items-center gap-1 md:flex">
             {nav.map(([label, href]) => (

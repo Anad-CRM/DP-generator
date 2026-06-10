@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "BrandDP Studio",
+  title: "TemplateStudio Studio",
   description: "AI-powered branded profile picture and social poster generator for teams, campuses, creators, and communities."
 };
 
