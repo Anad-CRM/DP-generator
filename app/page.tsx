@@ -7,6 +7,7 @@ import {
   ImageIcon,
   Trophy,
   Sparkles,
+  Receipt,
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 
@@ -55,6 +56,15 @@ const tools = [
     cta: "Create Award Card",
     color: "from-amber-500 to-orange-500",
     glow: "rgba(245,158,11,0.4)",
+  },
+  {
+    icon: Receipt,
+    href: "/receipt",
+    label: "🧾 Receipt Generator",
+    desc: "Generate professional receipts with auto-incrementing numbers, bill/ship-to addresses, and download as PDF or Excel.",
+    cta: "Generate Receipt",
+    color: "from-emerald-500 to-teal-500",
+    glow: "rgba(16,185,129,0.4)",
   },
 ];
 

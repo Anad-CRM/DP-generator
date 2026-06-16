@@ -5,6 +5,7 @@ const nav = [
   ["Templates", "/templates"],
   ["Editor", "/editor"],
   ["🏆 Awards", "/top-performer"],
+  ["🧾 Receipt", "/receipt"],
 ];
 
 export function AppShell({ children, compact = false }: { children: React.ReactNode; compact?: boolean }) {
