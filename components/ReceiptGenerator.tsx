@@ -289,80 +289,233 @@ export default function ReceiptGenerator() {
     });
   };
 
-  // ── PDF Download (html2canvas → exact preview match) ─────────────────────
+  // ── PDF Download (High Quality Native Selectable Vector PDF) ──────────────
   const downloadPDF = async () => {
-    const el = printRef.current;
-    if (!el) return;
     setPdfLoading(true);
     try {
-      const html2canvas = (await import("html2canvas")).default;
       const { jsPDF } = await import("jspdf");
+      const autoTable = (await import("jspdf-autotable")).default;
 
-      // Save original styles to restore them later
-      const originalWidth = el.style.width;
-      const originalMaxWidth = el.style.maxWidth;
-      const originalMinWidth = el.style.minWidth;
-      const originalBoxShadow = el.style.boxShadow;
-      const originalBorderRadius = el.style.borderRadius;
+      const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+      const W = doc.internal.pageSize.getWidth();
 
-      // Set temporary fixed styles so layout behaves exactly like standard A4
-      el.style.width = "794px";
-      el.style.maxWidth = "794px";
-      el.style.minWidth = "794px";
-      el.style.boxShadow = "none";
-      el.style.borderRadius = "0px";
+      // 1. Top accent bar
+      doc.setFillColor(13, 27, 77); // #0D1B4D
+      doc.rect(0, 0, W, 8, "F");
 
-      // Allow the DOM to repaint and layout to adjust to the new size
-      await new Promise((resolve) => setTimeout(resolve, 150));
+      // 2. Logo image (placed right aligned, optimized/compressed to reduce PDF size)
+      try {
+        const img = new window.Image();
+        img.src = "/Aibi_Primary Logo_Gradient.png";
+        await new Promise((res) => { img.onload = res; });
+        const maxCanvasWidth = 400;
+        const scale = Math.min(1, maxCanvasWidth / img.width);
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL("image/png");
+        const logoW = 48; // width in mm
+        const logoH = (img.height / img.width) * logoW;
+        doc.addImage(dataUrl, "PNG", W - 14 - logoW, 14, logoW, logoH);
+      } catch (_) {}
 
-      // Capture the preview element at 2.5× scale for high quality print sharpness
-      const canvas = await html2canvas(el, {
-        scale: 2.5,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: "#ffffff",
-        logging: false,
+      // 3. "RECEIPT" background watermark title
+      doc.setFontSize(20);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(215, 219, 230); // ~18% opacity of #0D1B4D
+      doc.text("RECEIPT", 14, 25);
+
+      // 4. Company info
+      doc.setFontSize(9.5);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(17, 17, 17); // #111
+      doc.text("INFERA AIBI CAMPUS PVT LTD", 14, 36);
+
+      doc.setFontSize(8.5);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(102, 102, 102); // #666
+      doc.text("Edappally, Kochi, Ernakulam", 14, 41);
+      doc.text("Kerala 682024", 14, 45);
+      doc.text("+91 9746067949", 14, 49);
+
+      doc.setTextColor(37, 99, 235); // #2563eb
+      doc.text("hr@aibicampus.com", 14, 53);
+
+      // 5. Date & receipt number (right-aligned)
+      doc.setFontSize(8.5);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(204, 0, 0); // #c00
+      doc.text(data.date, W - 14, 36, { align: "right" });
+
+      doc.setFontSize(7.5);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(136, 136, 136); // #888
+      doc.text("Receipt No.", W - 14, 42, { align: "right" });
+
+      doc.setFontSize(9.5);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(13, 27, 77); // #0D1B4D
+      doc.text(data.receiptNumber, W - 14, 47, { align: "right" });
+
+      // 6. Divider line
+      doc.setDrawColor(233, 234, 239);
+      doc.setLineWidth(0.3);
+      doc.line(14, 56, W - 14, 56);
+
+      // 7. Bill To / Ship To headings and lines
+      doc.setFontSize(7.5);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(13, 27, 77);
+      doc.text("BILL TO", 14, 63);
+      doc.text("SHIP TO", W / 2 + 3, 63);
+
+      doc.setDrawColor(13, 27, 77);
+      doc.setLineWidth(0.4);
+      doc.line(14, 64.5, W / 2 - 5, 64.5);
+      doc.line(W / 2 + 3, 64.5, W - 14, 64.5);
+
+      // Helper to render address blocks
+      const renderAddr = (block: AddressBlock, x: number, startY: number) => {
+        let y = startY;
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(17, 17, 17);
+        doc.text(block.name || "—", x, y);
+        y += 4.5;
+        
+        doc.setFont("helvetica", "normal");
+        if (block.phone) {
+          doc.setTextColor(37, 99, 235); // Blue
+          doc.text(block.phone, x, y);
+          y += 4.5;
+        }
+        if (block.email) {
+          doc.setTextColor(85, 85, 85); // Grey
+          doc.text(block.email, x, y);
+          y += 4.5;
+        }
+        if (block.address) {
+          doc.setTextColor(119, 119, 119); // Light Grey
+          const splitAddr = doc.splitTextToSize(block.address, 80);
+          doc.text(splitAddr, x, y);
+        }
+      };
+
+      renderAddr(data.billTo, 14, 69);
+      renderAddr(data.shipTo, W / 2 + 3, 69);
+
+      // 8. Line Items Table (with autotable)
+      const tableRows = data.items.map((i) => [
+        i.description || "",
+        String(i.qty),
+        `Rs. ${formatINR(i.unitPrice)}`,
+        `Rs. ${formatINR(i.qty * i.unitPrice)}`,
+      ]);
+
+      // Add empty lines to match preview height (padded to at least 8 rows)
+      const padCount = Math.max(0, 8 - data.items.length);
+      for (let i = 0; i < padCount; i++) {
+        tableRows.push(["", "", "", "—"]);
+      }
+
+      autoTable(doc, {
+        startY: 92,
+        head: [["DESCRIPTION", "QTY", "UNIT PRICE", "TOTAL"]],
+        body: tableRows,
+        theme: "grid",
+        styles: {
+          lineColor: [234, 235, 240],
+          lineWidth: 0.15,
+          cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 },
+          fontSize: 8,
+          font: "helvetica",
+          textColor: [50, 50, 50],
+        },
+        headStyles: {
+          fillColor: [13, 27, 77],
+          textColor: [255, 255, 255],
+          fontStyle: "bold",
+          fontSize: 7.5,
+        },
+        columnStyles: {
+          0: { halign: "left", cellWidth: 100 },
+          1: { halign: "right", cellWidth: 20 },
+          2: { halign: "right", cellWidth: 32 },
+          3: { halign: "right", cellWidth: 30 },
+        },
+        alternateRowStyles: { fillColor: [247, 247, 252] },
+        margin: { left: 14, right: 14 },
       });
 
-      // Restore original styles immediately after capture
-      el.style.width = originalWidth;
-      el.style.maxWidth = originalMaxWidth;
-      el.style.minWidth = originalMinWidth;
-      el.style.boxShadow = originalBoxShadow;
-      el.style.borderRadius = originalBorderRadius;
+      const finalY = (doc as any).lastAutoTable.finalY + 8;
 
-      const imgData = canvas.toDataURL("image/png");
-      const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
-      const pageW = doc.internal.pageSize.getWidth();
-      const pageH = doc.internal.pageSize.getHeight();
+      // 9. Totals Section (right-aligned)
+      const totalsList: [string, string][] = [
+        ["Subtotal", `Rs. ${formatINR(subtotal)}`],
+        ["Discount", `- Rs. ${formatINR(discountAmt)}`],
+        ["Subtotal less discount", `Rs. ${formatINR(subtotalLessDiscount)}`],
+        ["Tax", data.taxIncluded ? "Included" : "Rs. 0.00"],
+        ["Shipping / Handling", `Rs. ${formatINR(data.shipping)}`],
+      ];
 
-      // Scale image to fit the page width
-      const imgW = pageW;
-      const imgH = (canvas.height / canvas.width) * imgW;
+      let ty = finalY;
+      doc.setFontSize(8);
+      totalsList.forEach(([label, val]) => {
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(102, 102, 102); // #666
+        doc.text(label, W - 72, ty);
+        
+        doc.setFont("helvetica", label.includes("less") ? "bold" : "normal");
+        doc.setTextColor(34, 34, 34); // #222
+        doc.text(val, W - 14, ty, { align: "right" });
+        
+        doc.setDrawColor(234, 235, 240);
+        doc.setLineWidth(0.15);
+        doc.line(W - 72, ty + 1.5, W - 14, ty + 1.5);
+        
+        ty += 5.5;
+      });
 
-      // If taller than page, shrink to fit; otherwise center vertically
-      if (imgH <= pageH) {
-        doc.addImage(imgData, "PNG", 0, 0, imgW, imgH);
-      } else {
-        // Multi-page: slice canvas into page-height chunks
-        const ratio = canvas.width / pageW;
-        const pageHeightPx = pageH * ratio;
-        let yOffset = 0;
-        let pageIndex = 0;
-        while (yOffset < canvas.height) {
-          if (pageIndex > 0) doc.addPage();
-          const sliceH = Math.min(pageHeightPx, canvas.height - yOffset);
-          const sliceCanvas = document.createElement("canvas");
-          sliceCanvas.width = canvas.width;
-          sliceCanvas.height = sliceH;
-          sliceCanvas.getContext("2d")!.drawImage(
-            canvas, 0, yOffset, canvas.width, sliceH, 0, 0, canvas.width, sliceH
-          );
-          doc.addImage(sliceCanvas.toDataURL("image/png"), "PNG", 0, 0, pageW, sliceH / ratio);
-          yOffset += sliceH;
-          pageIndex++;
-        }
+      // 10. Paid Box (centered text alignment)
+      doc.setFillColor(13, 27, 77); // Navy blue: #0D1B4D
+      doc.roundedRect(W - 72, ty + 1.5, 58, 10, 1.5, 1.5, "F");
+      
+      // "PAID" tag
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8.5);
+      doc.setTextColor(180, 185, 205); // white opacity
+      doc.text("PAID", W - 67, ty + 8.2);
+      
+      // Amount
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.setTextColor(255, 255, 255);
+      doc.text(`Rs. ${formatINR(total)}`, W - 19, ty + 8.2, { align: "right" });
+
+      // 11. Remarks / Notes
+      if (data.remarks) {
+        doc.setFont("helvetica", "italic");
+        doc.setFontSize(7.5);
+        doc.setTextColor(153, 153, 153); // #aaa
+        const splitRemarks = doc.splitTextToSize(data.remarks, 100);
+        doc.text(splitRemarks, 14, finalY + 2);
       }
+
+      // 12. Footer
+      const footerY = doc.internal.pageSize.getHeight() - 16;
+      doc.setFillColor(0, 180, 216); // light blue line: #00b4d8
+      doc.rect(0, footerY - 2, W, 1, "F");
+      doc.setFillColor(13, 27, 77); // dark blue background: #0D1B4D
+      doc.rect(0, footerY - 1, W, 17, "F");
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7.5);
+      doc.setTextColor(255, 255, 255);
+      doc.text(
+        "Note : This is a computer-generated receipt and does not require a physical signature.",
+        W / 2,
+        footerY + 6,
+        { align: "center" }
+      );
 
       doc.save(`${data.receiptNumber.replace(/\//g, "-")}.pdf`);
     } finally {
