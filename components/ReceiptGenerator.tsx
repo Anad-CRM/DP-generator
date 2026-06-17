@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { AppShell } from "@/components/app-shell";
 import {
   Download,
@@ -140,7 +140,16 @@ export default function ReceiptGenerator() {
 
   const [initialized, setInitialized] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [xlsxLoading, setXlsxLoading] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
+
+  // Pre-load libraries so clicks are instant
+  useEffect(() => {
+    import("html2canvas");
+    import("jspdf");
+    import("xlsx");
+  }, []);
 
   // ── Saved items library state ────────────────────────────────────────
   const [savedItems, setSavedItems] = useState<SavedItem[]>(PRESET_SAVED_ITEMS);
@@ -280,184 +289,66 @@ export default function ReceiptGenerator() {
     });
   };
 
-  // ── PDF Download ──────────────────────────────────────────────────────────
+  // ── PDF Download (html2canvas → exact preview match) ─────────────────────
   const downloadPDF = async () => {
-    const { jsPDF } = await import("jspdf");
-    const autoTable = (await import("jspdf-autotable")).default;
-
-    const doc = new jsPDF({ unit: "mm", format: "a4" });
-    const W = doc.internal.pageSize.getWidth();
-
-    // Top bar
-    doc.setFillColor(13, 27, 77);
-    doc.rect(0, 0, W, 8, "F");
-
-    // Logo image
+    const el = printRef.current;
+    if (!el) return;
+    setPdfLoading(true);
     try {
-      const img = new window.Image();
-      img.src = "/Aibi_Primary Logo_Gradient.png";
-      await new Promise((res) => { img.onload = res; });
-      const canvas = document.createElement("canvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
-      canvas.getContext("2d")!.drawImage(img, 0, 0);
-      const dataUrl = canvas.toDataURL("image/png");
-      // Fit logo into ~55mm wide × ~22mm tall box at top-right
-      const logoW = 55;
-      const logoH = (img.height / img.width) * logoW;
-      doc.addImage(dataUrl, "PNG", W - 14 - logoW, 12, logoW, logoH);
-    } catch (_) {/* skip logo if fails */}
+      const html2canvas = (await import("html2canvas")).default;
+      const { jsPDF } = await import("jspdf");
 
-    // "RECEIPT" heading
-    doc.setFontSize(20);
-    doc.setTextColor(13, 27, 77);
-    doc.setFont("helvetica", "bold");
-    doc.text("RECEIPT", 14, 26);
+      // Capture the preview element at 2× scale for sharpness
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: "#ffffff",
+        logging: false,
+      });
 
-    // Company info
-    doc.setFontSize(8.5);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(20, 20, 20);
-    doc.text("INFERA AIBI CAMPUS PVT LTD", 14, 36);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(90, 90, 90);
-    doc.text("Edappally, Kochi, Ernakulam, Kerala 682024", 14, 41);
-    doc.text("+91 9746067949", 14, 46);
-    doc.setTextColor(0, 112, 192);
-    doc.text("hr@aibicampus.com", 14, 51);
+      const imgData = canvas.toDataURL("image/png");
+      const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+      const pageW = doc.internal.pageSize.getWidth();
+      const pageH = doc.internal.pageSize.getHeight();
 
-    // Date & receipt number (below logo area)
-    doc.setTextColor(180, 0, 0);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(8.5);
-    doc.text(data.date, W - 14, 36, { align: "right" });
-    doc.setTextColor(90, 90, 90);
-    doc.setFont("helvetica", "normal");
-    doc.text("Receipt No:", W - 14, 42, { align: "right" });
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(13, 27, 77);
-    doc.text(data.receiptNumber, W - 14, 47, { align: "right" });
+      // Scale image to fit the page width
+      const imgW = pageW;
+      const imgH = (canvas.height / canvas.width) * imgW;
 
-    // Divider
-    doc.setDrawColor(220, 220, 220);
-    doc.line(14, 56, W - 14, 56);
+      // If taller than page, shrink to fit; otherwise center vertically
+      if (imgH <= pageH) {
+        doc.addImage(imgData, "PNG", 0, 0, imgW, imgH);
+      } else {
+        // Multi-page: slice canvas into page-height chunks
+        const ratio = canvas.width / pageW;
+        const pageHeightPx = pageH * ratio;
+        let yOffset = 0;
+        let pageIndex = 0;
+        while (yOffset < canvas.height) {
+          if (pageIndex > 0) doc.addPage();
+          const sliceH = Math.min(pageHeightPx, canvas.height - yOffset);
+          const sliceCanvas = document.createElement("canvas");
+          sliceCanvas.width = canvas.width;
+          sliceCanvas.height = sliceH;
+          sliceCanvas.getContext("2d")!.drawImage(
+            canvas, 0, yOffset, canvas.width, sliceH, 0, 0, canvas.width, sliceH
+          );
+          doc.addImage(sliceCanvas.toDataURL("image/png"), "PNG", 0, 0, pageW, sliceH / ratio);
+          yOffset += sliceH;
+          pageIndex++;
+        }
+      }
 
-    // Bill To / Ship To
-    doc.setFontSize(7.5);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(13, 27, 77);
-    doc.text("BILL TO", 14, 63);
-    doc.text("SHIP TO", W / 2 + 5, 63);
-    doc.setDrawColor(13, 27, 77);
-    doc.line(14, 64, W / 2 - 5, 64);
-    doc.line(W / 2 + 5, 64, W - 14, 64);
-
-    const renderAddr = (block: AddressBlock, x: number, startY: number) => {
-      let y = startY;
-      doc.setFont("helvetica", "bold"); doc.setTextColor(20, 20, 20);
-      doc.text(block.name || "—", x, y); y += 5;
-      doc.setFont("helvetica", "normal"); doc.setTextColor(0, 112, 192);
-      if (block.phone) { doc.text(block.phone, x, y); y += 5; }
-      doc.setTextColor(90, 90, 90);
-      if (block.email) { doc.text(block.email, x, y); y += 5; }
-      if (block.address) { doc.text(block.address, x, y); }
-    };
-    renderAddr(data.billTo, 14, 70);
-    renderAddr(data.shipTo, W / 2 + 5, 70);
-
-    // Items table
-    const tableRows = data.items.map((i) => [
-      i.description,
-      String(i.qty),
-      `₹ ${formatINR(i.unitPrice)}`,
-      `₹ ${formatINR(i.qty * i.unitPrice)}`,
-    ]);
-
-    autoTable(doc, {
-      startY: 96,
-      head: [["DESCRIPTION", "QTY", "UNIT PRICE", "TOTAL"]],
-      body: tableRows,
-      theme: "grid",
-      headStyles: {
-        fillColor: [13, 27, 77],
-        textColor: [255, 255, 255],
-        fontSize: 8,
-        halign: "center",
-        fontStyle: "bold",
-      },
-      bodyStyles: { fontSize: 8, textColor: [50, 50, 50] },
-      columnStyles: {
-        0: { cellWidth: 90 },
-        1: { halign: "center" },
-        2: { halign: "right" },
-        3: { halign: "right" },
-      },
-      alternateRowStyles: { fillColor: [247, 247, 252] },
-    });
-
-    const finalY =
-      (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable
-        .finalY + 8;
-
-    // Totals
-    const totals: [string, string][] = [
-      ["Subtotal", `₹ ${formatINR(subtotal)}`],
-      ["Discount", `- ₹ ${formatINR(discountAmt)}`],
-      ["Subtotal less discount", `₹ ${formatINR(subtotalLessDiscount)}`],
-      ["Tax", data.taxIncluded ? "Included" : "₹ 0.00"],
-      ["Shipping / Handling", `₹ ${formatINR(data.shipping)}`],
-    ];
-
-    let ty = finalY;
-    doc.setFontSize(8);
-    totals.forEach(([label, val]) => {
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(100, 100, 100);
-      doc.text(label, W - 65, ty);
-      doc.setTextColor(30, 30, 30);
-      doc.text(val, W - 14, ty, { align: "right" });
-      doc.setDrawColor(230, 230, 230);
-      doc.line(W - 68, ty + 1.5, W - 14, ty + 1.5);
-      ty += 7;
-    });
-
-    // Paid total
-    doc.setFillColor(13, 27, 77);
-    doc.roundedRect(W - 70, ty, 56, 10, 2, 2, "F");
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(9.5);
-    doc.setTextColor(255, 255, 255);
-    doc.text(`PAID  ₹  ${formatINR(total)}`, W - 42, ty + 6.5, { align: "center" });
-
-    // Remarks
-    if (data.remarks) {
-      doc.setFont("helvetica", "italic");
-      doc.setFontSize(7.5);
-      doc.setTextColor(120, 120, 120);
-      doc.text(data.remarks, 14, ty + 6);
+      doc.save(`${data.receiptNumber.replace(/\//g, "-")}.pdf`);
+    } finally {
+      setPdfLoading(false);
     }
-
-    // Footer
-    const footerY = doc.internal.pageSize.getHeight() - 16;
-    doc.setFillColor(0, 174, 239);
-    doc.rect(0, footerY - 2, W, 1, "F");
-    doc.setFillColor(13, 27, 77);
-    doc.rect(0, footerY - 1, W, 17, "F");
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7.5);
-    doc.setTextColor(255, 255, 255);
-    doc.text(
-      "Note: This is a computer-generated receipt and does not require a physical signature.",
-      W / 2,
-      footerY + 6,
-      { align: "center" }
-    );
-
-    doc.save(`${data.receiptNumber.replace(/\//g, "-")}.pdf`);
   };
 
   // ── Excel/Sheet Download ──────────────────────────────────────────────────
   const downloadSheet = async () => {
+    setXlsxLoading(true);
     const XLSX = await import("xlsx");
     const ws_data: (string | number)[][] = [
       ["RECEIPT"],
@@ -508,6 +399,7 @@ export default function ReceiptGenerator() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Receipt");
     XLSX.writeFile(wb, `${data.receiptNumber.replace(/\//g, "-")}.xlsx`);
+    setXlsxLoading(false);
   };
 
   const handlePrint = () => window.print();
@@ -551,17 +443,19 @@ export default function ReceiptGenerator() {
             </button>
             <button
               onClick={downloadSheet}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3.5 py-2 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-500/20"
+              disabled={xlsxLoading}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3.5 py-2 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-500/20 disabled:opacity-60"
             >
               <FileSpreadsheet size={13} />
-              Excel
+              {xlsxLoading ? "Generating…" : "Excel"}
             </button>
             <button
               onClick={downloadPDF}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-4 py-2 text-xs font-bold text-white shadow-[0_4px_18px_rgba(139,92,246,0.4)] transition hover:scale-[1.02]"
+              disabled={pdfLoading}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-4 py-2 text-xs font-bold text-white shadow-[0_4px_18px_rgba(139,92,246,0.4)] transition hover:scale-[1.02] disabled:opacity-60 disabled:cursor-wait"
             >
               <Download size={13} />
-              Download PDF
+              {pdfLoading ? "Capturing…" : "Download PDF"}
             </button>
           </div>
         </div>
@@ -1232,10 +1126,11 @@ export default function ReceiptGenerator() {
             <div className="mt-4 flex justify-center gap-2.5">
               <button
                 onClick={downloadPDF}
-                className="group inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-2.5 text-xs font-bold text-white shadow-[0_4px_18px_rgba(139,92,246,0.35)] transition hover:scale-[1.02]"
+                disabled={pdfLoading}
+                className="group inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-2.5 text-xs font-bold text-white shadow-[0_4px_18px_rgba(139,92,246,0.35)] transition hover:scale-[1.02] disabled:opacity-60 disabled:cursor-wait"
               >
                 <Download size={13} />
-                PDF
+                {pdfLoading ? "Capturing…" : "PDF"}
                 <ArrowRight
                   size={11}
                   className="transition-transform group-hover:translate-x-0.5"
@@ -1243,10 +1138,11 @@ export default function ReceiptGenerator() {
               </button>
               <button
                 onClick={downloadSheet}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-5 py-2.5 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-500/20"
+                disabled={xlsxLoading}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-5 py-2.5 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-500/20 disabled:opacity-60"
               >
                 <FileSpreadsheet size={13} />
-                Excel
+                {xlsxLoading ? "Generating…" : "Excel"}
               </button>
               <button
                 onClick={handlePrint}
