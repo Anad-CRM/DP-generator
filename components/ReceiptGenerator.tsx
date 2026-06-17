@@ -298,14 +298,38 @@ export default function ReceiptGenerator() {
       const html2canvas = (await import("html2canvas")).default;
       const { jsPDF } = await import("jspdf");
 
-      // Capture the preview element at 2× scale for sharpness
+      // Save original styles to restore them later
+      const originalWidth = el.style.width;
+      const originalMaxWidth = el.style.maxWidth;
+      const originalMinWidth = el.style.minWidth;
+      const originalBoxShadow = el.style.boxShadow;
+      const originalBorderRadius = el.style.borderRadius;
+
+      // Set temporary fixed styles so layout behaves exactly like standard A4
+      el.style.width = "794px";
+      el.style.maxWidth = "794px";
+      el.style.minWidth = "794px";
+      el.style.boxShadow = "none";
+      el.style.borderRadius = "0px";
+
+      // Allow the DOM to repaint and layout to adjust to the new size
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      // Capture the preview element at 2.5× scale for high quality print sharpness
       const canvas = await html2canvas(el, {
-        scale: 2,
+        scale: 2.5,
         useCORS: true,
         allowTaint: true,
         backgroundColor: "#ffffff",
         logging: false,
       });
+
+      // Restore original styles immediately after capture
+      el.style.width = originalWidth;
+      el.style.maxWidth = originalMaxWidth;
+      el.style.minWidth = originalMinWidth;
+      el.style.boxShadow = originalBoxShadow;
+      el.style.borderRadius = originalBorderRadius;
 
       const imgData = canvas.toDataURL("image/png");
       const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
@@ -856,13 +880,14 @@ export default function ReceiptGenerator() {
                   RECEIPT
                 </div>
                 {/* Real logo */}
-                <Image
+                <img
                   src="/Aibi_Primary Logo_Gradient.png"
                   alt="Aibi Campus Logo"
-                  width={130}
-                  height={52}
-                  style={{ objectFit: "contain" }}
-                  priority
+                  style={{
+                    width: "130px",
+                    height: "52px",
+                    objectFit: "contain",
+                  }}
                 />
               </div>
 
@@ -904,8 +929,7 @@ export default function ReceiptGenerator() {
               {/* Bill To / Ship To */}
               <div
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
+                  display: "flex",
                   padding: "12px 24px",
                   gap: 16,
                   borderBottom: "1px solid #e9eaef",
@@ -913,7 +937,7 @@ export default function ReceiptGenerator() {
                 }}
               >
                 {(["billTo", "shipTo"] as const).map((k) => (
-                  <div key={k}>
+                  <div key={k} style={{ flex: 1, minWidth: 0 }}>
                     <div
                       style={{
                         fontSize: 7.5,
