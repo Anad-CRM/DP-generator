@@ -10,7 +10,14 @@ import {
   Trash2,
   Receipt,
   ArrowRight,
+  Copy,
+  Bookmark,
+  BookmarkCheck,
+  ChevronDown,
+  ChevronUp,
+  X,
 } from "lucide-react";
+import Image from "next/image";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface LineItem {
@@ -20,21 +27,24 @@ interface LineItem {
   unitPrice: number;
 }
 
+interface SavedItem {
+  id: string;
+  description: string;
+  unitPrice: number;
+}
+
+interface AddressBlock {
+  name: string;
+  phone: string;
+  email: string;
+  address: string;
+}
+
 interface ReceiptData {
   receiptNumber: string;
   date: string;
-  billTo: {
-    name: string;
-    phone: string;
-    email: string;
-    address: string;
-  };
-  shipTo: {
-    name: string;
-    phone: string;
-    email: string;
-    address: string;
-  };
+  billTo: AddressBlock;
+  shipTo: AddressBlock;
   items: LineItem[];
   discount: number;
   taxIncluded: boolean;
@@ -48,50 +58,103 @@ function uid() {
 }
 
 function formatINR(n: number) {
-  return n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return n.toLocaleString("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 function todayStr() {
   const d = new Date();
-  return `${String(d.getDate()).padStart(2, "0")}-${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
+  return `${String(d.getDate()).padStart(2, "0")}-${String(
+    d.getMonth() + 1
+  ).padStart(2, "0")}-${d.getFullYear()}`;
 }
 
-// Load persisted receipt counter from localStorage
-function getNextReceiptNumber(): string {
-  if (typeof window === "undefined") return "REC/DIG/712";
+/** Read current counter without incrementing */
+function currentReceiptNumber(): string {
+  if (typeof window === "undefined") return "REC/DIG/001";
   const stored = localStorage.getItem("receipt_counter");
-  const num = stored ? parseInt(stored, 10) + 1 : 713;
-  localStorage.setItem("receipt_counter", String(num));
-  return `REC/DIG/${num}`;
+  const num = stored ? parseInt(stored, 10) : 713;
+  return `REC/DIG/${String(num).padStart(3, "0")}`;
 }
 
+/** Increment counter and return new number */
+function nextReceiptNumber(): string {
+  if (typeof window === "undefined") return "REC/DIG/001";
+  const stored = localStorage.getItem("receipt_counter");
+  const num = stored ? parseInt(stored, 10) + 1 : 714;
+  localStorage.setItem("receipt_counter", String(num));
+  return `REC/DIG/${String(num).padStart(3, "0")}`;
+}
+
+const EMPTY_ADDRESS: AddressBlock = { name: "", phone: "", email: "", address: "" };
 const DEFAULT_ITEMS: LineItem[] = [
   { id: uid(), description: "", qty: 1, unitPrice: 0 },
 ];
+
+// ─── Saved Items Library ──────────────────────────────────────────────────────
+const PRESET_SAVED_ITEMS: SavedItem[] = [
+  { id: "p1", description: "Digital Marketing Course", unitPrice: 15000 },
+  { id: "p2", description: "AI & ML Bootcamp", unitPrice: 25000 },
+  { id: "p3", description: "Business Innovation Workshop", unitPrice: 8000 },
+  { id: "p4", description: "One-on-One Mentorship Session", unitPrice: 3500 },
+  { id: "p5", description: "Campus Registration Fee", unitPrice: 1000 },
+  { id: "p6", description: "Certificate Program – Full Stack", unitPrice: 35000 },
+  { id: "p7", description: "Study Material & Resources", unitPrice: 2500 },
+  { id: "p8", description: "Placement Assistance Package", unitPrice: 5000 },
+];
+
+const LS_SAVED_KEY = "receipt_saved_items";
+
+function loadSavedItems(): SavedItem[] {
+  if (typeof window === "undefined") return PRESET_SAVED_ITEMS;
+  try {
+    const raw = localStorage.getItem(LS_SAVED_KEY);
+    if (raw) return JSON.parse(raw) as SavedItem[];
+    localStorage.setItem(LS_SAVED_KEY, JSON.stringify(PRESET_SAVED_ITEMS));
+    return PRESET_SAVED_ITEMS;
+  } catch {
+    return PRESET_SAVED_ITEMS;
+  }
+}
+
+function persistSavedItems(items: SavedItem[]) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(LS_SAVED_KEY, JSON.stringify(items));
+}
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 export default function ReceiptGenerator() {
   const [data, setData] = useState<ReceiptData>({
     receiptNumber: "REC/DIG/713",
     date: todayStr(),
-    billTo: { name: "", phone: "", email: "", address: "" },
-    shipTo: { name: "", phone: "", email: "", address: "" },
+    billTo: { ...EMPTY_ADDRESS },
+    shipTo: { ...EMPTY_ADDRESS },
     items: DEFAULT_ITEMS,
     discount: 0,
     taxIncluded: true,
     shipping: 0,
-    remarks: "Remarks, notes....",
+    remarks: "",
   });
 
   const [initialized, setInitialized] = useState(false);
+  const [copied, setCopied] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
-  // Initialize receipt number from localStorage on first mount
+  // ── Saved items library state ────────────────────────────────────────
+  const [savedItems, setSavedItems] = useState<SavedItem[]>(PRESET_SAVED_ITEMS);
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [savedFlash, setSavedFlash] = useState<string | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newDesc, setNewDesc] = useState("");
+  const [newPrice, setNewPrice] = useState("");
+
+  // Initialize receipt number + saved items from localStorage on first mount
   React.useEffect(() => {
     if (!initialized) {
-      const stored = localStorage.getItem("receipt_counter");
-      const num = stored ? parseInt(stored, 10) : 712;
-      setData((d) => ({ ...d, receiptNumber: `REC/DIG/${num}` }));
+      setData((d) => ({ ...d, receiptNumber: currentReceiptNumber() }));
+      setSavedItems(loadSavedItems());
       setInitialized(true);
     }
   }, [initialized]);
@@ -100,7 +163,6 @@ export default function ReceiptGenerator() {
   const subtotal = data.items.reduce((s, i) => s + i.qty * i.unitPrice, 0);
   const discountAmt = data.discount;
   const subtotalLessDiscount = subtotal - discountAmt;
-  const totalTax = data.taxIncluded ? 0 : 0; // extend if needed
   const total = subtotalLessDiscount + data.shipping;
 
   // ── Handlers ──────────────────────────────────────────────────────────────
@@ -110,41 +172,112 @@ export default function ReceiptGenerator() {
     []
   );
 
-  const setBillTo = (field: keyof ReceiptData["billTo"], val: string) =>
+  const setBillTo = (field: keyof AddressBlock, val: string) =>
     setData((d) => ({ ...d, billTo: { ...d.billTo, [field]: val } }));
 
-  const setShipTo = (field: keyof ReceiptData["shipTo"], val: string) =>
+  const setShipTo = (field: keyof AddressBlock, val: string) =>
     setData((d) => ({ ...d, shipTo: { ...d.shipTo, [field]: val } }));
+
+  /** Copy Bill To → Ship To */
+  const copyBillToShip = () => {
+    setData((d) => ({ ...d, shipTo: { ...d.billTo } }));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  };
+
+  // ── Saved-items handlers ────────────────────────────────────────────────────
+  /** Insert a saved item as a new line in the receipt */
+  const addFromLibrary = useCallback((s: SavedItem) => {
+    setData((d) => ({
+      ...d,
+      items: [
+        ...d.items,
+        { id: uid(), description: s.description, qty: 1, unitPrice: s.unitPrice },
+      ],
+    }));
+  }, []);
+
+  /** Save a line-item row into the library */
+  const saveRowToLibrary = useCallback((item: LineItem) => {
+    if (!item.description.trim()) return;
+    setSavedItems((prev) => {
+      const already = prev.some(
+        (s) => s.description.toLowerCase() === item.description.toLowerCase()
+      );
+      if (already) return prev;
+      const next = [
+        ...prev,
+        { id: uid(), description: item.description, unitPrice: item.unitPrice },
+      ];
+      persistSavedItems(next);
+      return next;
+    });
+    setSavedFlash(item.id);
+    setTimeout(() => setSavedFlash(null), 1500);
+  }, []);
+
+  /** Add a brand-new item to the library from the inline form */
+  const addNewToLibrary = () => {
+    const desc = newDesc.trim();
+    const price = parseFloat(newPrice) || 0;
+    if (!desc) return;
+    setSavedItems((prev) => {
+      const next = [...prev, { id: uid(), description: desc, unitPrice: price }];
+      persistSavedItems(next);
+      return next;
+    });
+    setNewDesc("");
+    setNewPrice("");
+    setShowAddForm(false);
+  };
+
+  /** Remove an item from the library */
+  const removeFromLibrary = (id: string) => {
+    setSavedItems((prev) => {
+      const next = prev.filter((s) => s.id !== id);
+      persistSavedItems(next);
+      return next;
+    });
+  };
 
   const addItem = () =>
     setData((d) => ({
       ...d,
-      items: [...d.items, { id: uid(), description: "", qty: 1, unitPrice: 0 }],
+      items: [
+        ...d.items,
+        { id: uid(), description: "", qty: 1, unitPrice: 0 },
+      ],
     }));
 
   const removeItem = (id: string) =>
-    setData((d) => ({ ...d, items: d.items.filter((i) => i.id !== id) }));
+    setData((d) => ({
+      ...d,
+      items: d.items.filter((i) => i.id !== id),
+    }));
 
-  const updateItem = (id: string, field: keyof Omit<LineItem, "id">, val: string | number) =>
+  const updateItem = (
+    id: string,
+    field: keyof Omit<LineItem, "id">,
+    val: string | number
+  ) =>
     setData((d) => ({
       ...d,
       items: d.items.map((i) => (i.id === id ? { ...i, [field]: val } : i)),
     }));
 
-  // Increment receipt number for next receipt
   const newReceipt = () => {
-    const next = getNextReceiptNumber();
-    setData((d) => ({
-      ...d,
+    const next = nextReceiptNumber();
+    setData({
       receiptNumber: next,
       date: todayStr(),
-      billTo: { name: "", phone: "", email: "", address: "" },
-      shipTo: { name: "", phone: "", email: "", address: "" },
+      billTo: { ...EMPTY_ADDRESS },
+      shipTo: { ...EMPTY_ADDRESS },
       items: [{ id: uid(), description: "", qty: 1, unitPrice: 0 }],
       discount: 0,
+      taxIncluded: true,
       shipping: 0,
-      remarks: "Remarks, notes....",
-    }));
+      remarks: "",
+    });
   };
 
   // ── PDF Download ──────────────────────────────────────────────────────────
@@ -155,80 +288,93 @@ export default function ReceiptGenerator() {
     const doc = new jsPDF({ unit: "mm", format: "a4" });
     const W = doc.internal.pageSize.getWidth();
 
-    // Header bar
+    // Top bar
     doc.setFillColor(13, 27, 77);
-    doc.rect(0, 0, W, 10, "F");
+    doc.rect(0, 0, W, 8, "F");
+
+    // Logo image
+    try {
+      const img = new window.Image();
+      img.src = "/Aibi_Primary Logo_Gradient.png";
+      await new Promise((res) => { img.onload = res; });
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      canvas.getContext("2d")!.drawImage(img, 0, 0);
+      const dataUrl = canvas.toDataURL("image/png");
+      // Fit logo into ~55mm wide × ~22mm tall box at top-right
+      const logoW = 55;
+      const logoH = (img.height / img.width) * logoW;
+      doc.addImage(dataUrl, "PNG", W - 14 - logoW, 12, logoW, logoH);
+    } catch (_) {/* skip logo if fails */}
+
+    // "RECEIPT" heading
+    doc.setFontSize(20);
+    doc.setTextColor(13, 27, 77);
+    doc.setFont("helvetica", "bold");
+    doc.text("RECEIPT", 14, 26);
 
     // Company info
-    doc.setFontSize(13);
-    doc.setTextColor(13, 27, 77);
+    doc.setFontSize(8.5);
     doc.setFont("helvetica", "bold");
-    doc.text("RECEIPT", 14, 30);
-
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
-    doc.text("INFERA AIBI CAMPUS PVT LTD", 14, 42);
+    doc.setTextColor(20, 20, 20);
+    doc.text("INFERA AIBI CAMPUS PVT LTD", 14, 36);
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(80, 80, 80);
-    doc.text("Edappally,Kochi,Ernakulam", 14, 47);
-    doc.text("Kerala 682024", 14, 52);
-    doc.text("+91 9746067949", 14, 57);
+    doc.setTextColor(90, 90, 90);
+    doc.text("Edappally, Kochi, Ernakulam, Kerala 682024", 14, 41);
+    doc.text("+91 9746067949", 14, 46);
     doc.setTextColor(0, 112, 192);
-    doc.text("hr@aibicampus.com", 14, 62);
+    doc.text("hr@aibicampus.com", 14, 51);
 
-    // Date & receipt number
-    doc.setTextColor(200, 0, 0);
+    // Date & receipt number (below logo area)
+    doc.setTextColor(180, 0, 0);
     doc.setFont("helvetica", "bold");
-    doc.text(data.date, W - 14, 42, { align: "right" });
-    doc.setTextColor(80, 80, 80);
+    doc.setFontSize(8.5);
+    doc.text(data.date, W - 14, 36, { align: "right" });
+    doc.setTextColor(90, 90, 90);
     doc.setFont("helvetica", "normal");
-    doc.text("Receipt No. :", W - 55, 48);
-    doc.setTextColor(13, 27, 77);
+    doc.text("Receipt No:", W - 14, 42, { align: "right" });
     doc.setFont("helvetica", "bold");
-    doc.text(data.receiptNumber, W - 14, 48, { align: "right" });
+    doc.setTextColor(13, 27, 77);
+    doc.text(data.receiptNumber, W - 14, 47, { align: "right" });
 
-    // Separator line
-    doc.setDrawColor(200, 200, 200);
-    doc.line(14, 68, W - 14, 68);
+    // Divider
+    doc.setDrawColor(220, 220, 220);
+    doc.line(14, 56, W - 14, 56);
 
     // Bill To / Ship To
-    doc.setFontSize(8);
+    doc.setFontSize(7.5);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(13, 27, 77);
-    doc.text("BILL TO", 14, 76);
-    doc.text("SHIP TO", W / 2 + 6, 76);
-
+    doc.text("BILL TO", 14, 63);
+    doc.text("SHIP TO", W / 2 + 5, 63);
     doc.setDrawColor(13, 27, 77);
-    doc.line(14, 77, W / 2 - 6, 77);
-    doc.line(W / 2 + 6, 77, W - 14, 77);
+    doc.line(14, 64, W / 2 - 5, 64);
+    doc.line(W / 2 + 5, 64, W - 14, 64);
 
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(30, 30, 30);
-    doc.text(data.billTo.name || "—", 14, 83);
-    doc.text(data.shipTo.name || "—", W / 2 + 6, 83);
-
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(0, 112, 192);
-    doc.text(data.billTo.phone || "", 14, 88);
-    doc.text(data.shipTo.phone || "", W / 2 + 6, 88);
-
-    doc.setTextColor(80, 80, 80);
-    doc.text(data.billTo.email || "", 14, 93);
-    doc.text(data.shipTo.email || "", W / 2 + 6, 93);
-
-    if (data.billTo.address) doc.text(data.billTo.address, 14, 98);
-    if (data.shipTo.address) doc.text(data.shipTo.address, W / 2 + 6, 98);
+    const renderAddr = (block: AddressBlock, x: number, startY: number) => {
+      let y = startY;
+      doc.setFont("helvetica", "bold"); doc.setTextColor(20, 20, 20);
+      doc.text(block.name || "—", x, y); y += 5;
+      doc.setFont("helvetica", "normal"); doc.setTextColor(0, 112, 192);
+      if (block.phone) { doc.text(block.phone, x, y); y += 5; }
+      doc.setTextColor(90, 90, 90);
+      if (block.email) { doc.text(block.email, x, y); y += 5; }
+      if (block.address) { doc.text(block.address, x, y); }
+    };
+    renderAddr(data.billTo, 14, 70);
+    renderAddr(data.shipTo, W / 2 + 5, 70);
 
     // Items table
     const tableRows = data.items.map((i) => [
       i.description,
       String(i.qty),
-      formatINR(i.unitPrice),
-      formatINR(i.qty * i.unitPrice),
+      `₹ ${formatINR(i.unitPrice)}`,
+      `₹ ${formatINR(i.qty * i.unitPrice)}`,
     ]);
 
     autoTable(doc, {
-      startY: 106,
+      startY: 96,
       head: [["DESCRIPTION", "QTY", "UNIT PRICE", "TOTAL"]],
       body: tableRows,
       theme: "grid",
@@ -246,65 +392,66 @@ export default function ReceiptGenerator() {
         2: { halign: "right" },
         3: { halign: "right" },
       },
-      alternateRowStyles: { fillColor: [245, 245, 250] },
+      alternateRowStyles: { fillColor: [247, 247, 252] },
     });
 
-    const finalY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
+    const finalY =
+      (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable
+        .finalY + 8;
 
     // Totals
-    const totals = [
-      ["SUBTOTAL", formatINR(subtotal)],
-      ["DISCOUNT", formatINR(discountAmt)],
-      ["SUBTOTAL LESS DISCOUNT", formatINR(subtotalLessDiscount)],
-      ["TAX RATE", data.taxIncluded ? "INCLUDED" : "0.00"],
-      ["TOTAL TAX", data.taxIncluded ? "INCLUDED" : "0.00"],
-      ["SHIPPING/HANDLING", formatINR(data.shipping)],
+    const totals: [string, string][] = [
+      ["Subtotal", `₹ ${formatINR(subtotal)}`],
+      ["Discount", `- ₹ ${formatINR(discountAmt)}`],
+      ["Subtotal less discount", `₹ ${formatINR(subtotalLessDiscount)}`],
+      ["Tax", data.taxIncluded ? "Included" : "₹ 0.00"],
+      ["Shipping / Handling", `₹ ${formatINR(data.shipping)}`],
     ];
 
     let ty = finalY;
     doc.setFontSize(8);
     totals.forEach(([label, val]) => {
       doc.setFont("helvetica", "normal");
-      doc.setTextColor(80, 80, 80);
-      doc.text(label, W - 60, ty);
+      doc.setTextColor(100, 100, 100);
+      doc.text(label, W - 65, ty);
       doc.setTextColor(30, 30, 30);
       doc.text(val, W - 14, ty, { align: "right" });
-      doc.setDrawColor(220, 220, 220);
-      doc.line(W - 65, ty + 1, W - 14, ty + 1);
+      doc.setDrawColor(230, 230, 230);
+      doc.line(W - 68, ty + 1.5, W - 14, ty + 1.5);
       ty += 7;
     });
 
     // Paid total
+    doc.setFillColor(13, 27, 77);
+    doc.roundedRect(W - 70, ty, 56, 10, 2, 2, "F");
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.setTextColor(13, 27, 77);
-    doc.text(`Paid  ₹  ${formatINR(total)}`, W - 14, ty + 3, { align: "right" });
+    doc.setFontSize(9.5);
+    doc.setTextColor(255, 255, 255);
+    doc.text(`PAID  ₹  ${formatINR(total)}`, W - 42, ty + 6.5, { align: "center" });
 
     // Remarks
     if (data.remarks) {
       doc.setFont("helvetica", "italic");
-      doc.setFontSize(8);
-      doc.setTextColor(100, 100, 100);
-      doc.text(data.remarks, 14, ty + 3);
+      doc.setFontSize(7.5);
+      doc.setTextColor(120, 120, 120);
+      doc.text(data.remarks, 14, ty + 6);
     }
 
     // Footer
-    const footerY = doc.internal.pageSize.getHeight() - 14;
+    const footerY = doc.internal.pageSize.getHeight() - 16;
+    doc.setFillColor(0, 174, 239);
+    doc.rect(0, footerY - 2, W, 1, "F");
     doc.setFillColor(13, 27, 77);
-    doc.rect(0, footerY - 4, W, 18, "F");
+    doc.rect(0, footerY - 1, W, 17, "F");
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
+    doc.setFontSize(7.5);
     doc.setTextColor(255, 255, 255);
     doc.text(
-      "Note : This is a computer-generated receipt and does not require a physical signature.",
+      "Note: This is a computer-generated receipt and does not require a physical signature.",
       W / 2,
-      footerY + 4,
+      footerY + 6,
       { align: "center" }
     );
-
-    // Footer separator bar
-    doc.setFillColor(0, 174, 239);
-    doc.rect(0, footerY - 5, W, 1, "F");
 
     doc.save(`${data.receiptNumber.replace(/\//g, "-")}.pdf`);
   };
@@ -312,12 +459,18 @@ export default function ReceiptGenerator() {
   // ── Excel/Sheet Download ──────────────────────────────────────────────────
   const downloadSheet = async () => {
     const XLSX = await import("xlsx");
-
     const ws_data: (string | number)[][] = [
       ["RECEIPT"],
       [],
       ["INFERA AIBI CAMPUS PVT LTD", "", "", "", "Date:", data.date],
-      ["Edappally, Kochi, Ernakulam", "", "", "", "Receipt No.:", data.receiptNumber],
+      [
+        "Edappally, Kochi, Ernakulam",
+        "",
+        "",
+        "",
+        "Receipt No.:",
+        data.receiptNumber,
+      ],
       ["Kerala 682024"],
       ["+91 9746067949"],
       ["hr@aibicampus.com"],
@@ -329,18 +482,12 @@ export default function ReceiptGenerator() {
       [data.billTo.address, "", data.shipTo.address],
       [],
       ["DESCRIPTION", "QTY", "UNIT PRICE", "TOTAL"],
-      ...data.items.map((i) => [
-        i.description,
-        i.qty,
-        i.unitPrice,
-        i.qty * i.unitPrice,
-      ]),
+      ...data.items.map((i) => [i.description, i.qty, i.unitPrice, i.qty * i.unitPrice]),
       [],
       ["", "", "SUBTOTAL", subtotal],
       ["", "", "DISCOUNT", discountAmt],
       ["", "", "SUBTOTAL LESS DISCOUNT", subtotalLessDiscount],
-      ["", "", "TAX RATE", data.taxIncluded ? "INCLUDED" : 0],
-      ["", "", "TOTAL TAX", data.taxIncluded ? "INCLUDED" : 0],
+      ["", "", "TAX", data.taxIncluded ? "INCLUDED" : 0],
       ["", "", "SHIPPING/HANDLING", data.shipping],
       ["", "", "PAID TOTAL (₹)", total],
       [],
@@ -350,164 +497,315 @@ export default function ReceiptGenerator() {
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(ws_data);
-    ws["!cols"] = [{ wch: 42 }, { wch: 8 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 20 }];
-
+    ws["!cols"] = [
+      { wch: 42 },
+      { wch: 8 },
+      { wch: 18 },
+      { wch: 16 },
+      { wch: 14 },
+      { wch: 20 },
+    ];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Receipt");
     XLSX.writeFile(wb, `${data.receiptNumber.replace(/\//g, "-")}.xlsx`);
   };
 
-  // ── Print ─────────────────────────────────────────────────────────────────
-  const handlePrint = () => {
-    window.print();
-  };
+  const handlePrint = () => window.print();
+
+  // ── Shared input className ────────────────────────────────────────────────
+  const inputCls =
+    "w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/25 focus:border-violet-400/60 focus:outline-none transition";
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <AppShell>
-      <div className="mx-auto max-w-7xl px-4 py-10 md:px-6">
-        {/* Page heading */}
-        <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mx-auto max-w-7xl px-4 py-8 md:px-6">
+        {/* ── Page heading ─────────────────────────────────────────────── */}
+        <div className="mb-7 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-fuchsia-400">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-fuchsia-400">
               Document Generator
             </p>
-            <h1 className="mt-1 text-3xl font-extrabold text-white">
+            <h1 className="mt-0.5 text-2xl font-extrabold text-white">
               Receipt Generator
             </h1>
-            <p className="mt-1 text-sm text-white/50">
-              Fill in the details, preview, then download as PDF or Excel.
+            <p className="mt-0.5 text-sm text-white/40">
+              Fill in the details below, then download as PDF or Excel.
             </p>
           </div>
+
           <div className="flex flex-wrap gap-2">
             <button
               onClick={newReceipt}
-              className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white/70 transition hover:bg-white/10 hover:text-white"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-white/12 bg-white/5 px-3.5 py-2 text-xs font-semibold text-white/60 transition hover:bg-white/10 hover:text-white"
             >
-              <Receipt size={15} />
+              <Receipt size={13} />
               New Receipt
             </button>
             <button
               onClick={handlePrint}
-              className="inline-flex items-center gap-2 rounded-xl border border-blue-400/30 bg-blue-500/10 px-4 py-2.5 text-sm font-semibold text-blue-300 transition hover:bg-blue-500/20"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-sky-400/30 bg-sky-500/10 px-3.5 py-2 text-xs font-semibold text-sky-300 transition hover:bg-sky-500/20"
             >
-              <Printer size={15} />
+              <Printer size={13} />
               Print
             </button>
             <button
               onClick={downloadSheet}
-              className="inline-flex items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2.5 text-sm font-semibold text-emerald-300 transition hover:bg-emerald-500/20"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3.5 py-2 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-500/20"
             >
-              <FileSpreadsheet size={15} />
-              Excel (.xlsx)
+              <FileSpreadsheet size={13} />
+              Excel
             </button>
             <button
               onClick={downloadPDF}
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-2.5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(139,92,246,0.4)] transition hover:scale-[1.02]"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-4 py-2 text-xs font-bold text-white shadow-[0_4px_18px_rgba(139,92,246,0.4)] transition hover:scale-[1.02]"
             >
-              <Download size={15} />
+              <Download size={13} />
               Download PDF
             </button>
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
+        <div className="grid gap-6 lg:grid-cols-[1fr_1.15fr]">
           {/* ── LEFT: Form ─────────────────────────────────────────────── */}
-          <div className="flex flex-col gap-5">
-            {/* Receipt meta */}
+          <div className="flex flex-col gap-4">
+
+            {/* Receipt Info */}
             <div className="glass rounded-2xl p-5">
-              <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-white/60">
+              <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-white/50">
                 Receipt Info
               </h2>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-white/50">
+                  <label className="mb-1 block text-[11px] font-semibold text-white/40">
                     Receipt No.
                   </label>
                   <input
                     value={data.receiptNumber}
                     onChange={(e) => set("receiptNumber", e.target.value)}
-                    className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/20 focus:border-violet-400/60 focus:outline-none"
+                    className={inputCls}
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-white/50">
+                  <label className="mb-1 block text-[11px] font-semibold text-white/40">
                     Date
                   </label>
                   <input
                     value={data.date}
                     onChange={(e) => set("date", e.target.value)}
-                    className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/20 focus:border-violet-400/60 focus:outline-none"
+                    className={inputCls}
                   />
                 </div>
               </div>
             </div>
 
-            {/* Bill To / Ship To */}
-            <div className="grid gap-4 sm:grid-cols-2">
-              {(
-                [
-                  { label: "Bill To", key: "billTo" as const },
-                  { label: "Ship To", key: "shipTo" as const },
-                ] as const
-              ).map(({ label, key }) => (
-                <div key={key} className="glass rounded-2xl p-5">
-                  <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-white/60">
-                    {label}
-                  </h2>
-                  <div className="flex flex-col gap-2">
-                    {(
-                      [
-                        { field: "name" as const, placeholder: "Full name" },
-                        { field: "phone" as const, placeholder: "+91 XXXXXXXXXX" },
-                        { field: "email" as const, placeholder: "email@example.com" },
-                        { field: "address" as const, placeholder: "Address" },
-                      ] as const
-                    ).map(({ field, placeholder }) => (
-                      <input
-                        key={field}
-                        value={key === "billTo" ? data.billTo[field] : data.shipTo[field]}
-                        onChange={(e) =>
-                          key === "billTo"
-                            ? setBillTo(field, e.target.value)
-                            : setShipTo(field, e.target.value)
-                        }
-                        placeholder={placeholder}
-                        className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/20 focus:border-violet-400/60 focus:outline-none"
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))}
+            {/* Bill To */}
+            <div className="glass rounded-2xl p-5">
+              <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-white/50">
+                Bill To
+              </h2>
+              <div className="flex flex-col gap-2">
+                {(
+                  [
+                    { field: "name" as const, placeholder: "Full name" },
+                    { field: "phone" as const, placeholder: "+91 XXXXXXXXXX" },
+                    { field: "email" as const, placeholder: "email@example.com" },
+                    { field: "address" as const, placeholder: "Address" },
+                  ] as const
+                ).map(({ field, placeholder }) => (
+                  <input
+                    key={field}
+                    value={data.billTo[field]}
+                    onChange={(e) => setBillTo(field, e.target.value)}
+                    placeholder={placeholder}
+                    className={inputCls}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Ship To */}
+            <div className="glass rounded-2xl p-5">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-white/50">
+                  Ship To
+                </h2>
+                <button
+                  onClick={copyBillToShip}
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
+                    copied
+                      ? "bg-emerald-500/20 text-emerald-300"
+                      : "border border-violet-400/30 bg-violet-500/10 text-violet-300 hover:bg-violet-500/20"
+                  }`}
+                >
+                  <Copy size={11} />
+                  {copied ? "Copied!" : "Copy from Bill To"}
+                </button>
+              </div>
+              <div className="flex flex-col gap-2">
+                {(
+                  [
+                    { field: "name" as const, placeholder: "Full name" },
+                    { field: "phone" as const, placeholder: "+91 XXXXXXXXXX" },
+                    { field: "email" as const, placeholder: "email@example.com" },
+                    { field: "address" as const, placeholder: "Address" },
+                  ] as const
+                ).map(({ field, placeholder }) => (
+                  <input
+                    key={field}
+                    value={data.shipTo[field]}
+                    onChange={(e) => setShipTo(field, e.target.value)}
+                    placeholder={placeholder}
+                    className={inputCls}
+                  />
+                ))}
+              </div>
             </div>
 
             {/* Line Items */}
             <div className="glass rounded-2xl p-5">
-              <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-white/60">
+              <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-white/50">
                 Line Items
               </h2>
-              <div className="mb-2 grid grid-cols-[1fr_56px_88px_80px_32px] gap-2 text-xs font-semibold uppercase text-white/40">
+
+              {/* ── Saved Items Library ─────────────────────────────────── */}
+              <div className="mb-4 overflow-hidden rounded-xl border border-white/8 bg-white/3">
+                {/* Toggle header */}
+                <button
+                  onClick={() => setLibraryOpen((o) => !o)}
+                  className="flex w-full items-center justify-between px-3.5 py-2.5 text-left transition hover:bg-white/5"
+                >
+                  <div className="flex items-center gap-2">
+                    <Bookmark size={12} className="text-violet-400" />
+                    <span className="text-[11px] font-bold uppercase tracking-widest text-white/50">
+                      Saved Items Library
+                    </span>
+                    <span className="rounded-full bg-violet-500/20 px-1.5 py-0.5 text-[10px] font-bold text-violet-300">
+                      {savedItems.length}
+                    </span>
+                  </div>
+                  {libraryOpen ? (
+                    <ChevronUp size={12} className="text-white/25" />
+                  ) : (
+                    <ChevronDown size={12} className="text-white/25" />
+                  )}
+                </button>
+
+                {libraryOpen && (
+                  <div className="border-t border-white/8 px-3.5 pb-3.5 pt-2.5">
+                    {/* Quick-add chips */}
+                    {savedItems.length === 0 ? (
+                      <p className="py-2 text-center text-[11px] italic text-white/25">
+                        No saved items yet — use the bookmark icon on any row to save it.
+                      </p>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5">
+                        {savedItems.map((s) => (
+                          <div
+                            key={s.id}
+                            className="group flex items-center overflow-hidden rounded-lg border border-white/10 bg-white/5 transition hover:border-violet-400/40 hover:bg-violet-500/10"
+                          >
+                            <button
+                              onClick={() => addFromLibrary(s)}
+                              className="flex items-center gap-1.5 px-2.5 py-1.5"
+                              title={`Add to receipt — ₹${formatINR(s.unitPrice)}`}
+                            >
+                              <span className="max-w-[150px] truncate text-[11px] font-medium text-white/65">
+                                {s.description}
+                              </span>
+                              <span className="shrink-0 text-[10px] font-bold text-emerald-400">
+                                ₹{formatINR(s.unitPrice)}
+                              </span>
+                            </button>
+                            <button
+                              onClick={() => removeFromLibrary(s.id)}
+                              title="Remove from library"
+                              className="hidden h-full items-center pr-1.5 text-white/20 hover:text-red-400 group-hover:flex"
+                            >
+                              <X size={10} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Add to library form */}
+                    {showAddForm ? (
+                      <div className="mt-2.5 flex items-center gap-1.5">
+                        <input
+                          autoFocus
+                          value={newDesc}
+                          onChange={(e) => setNewDesc(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && addNewToLibrary()}
+                          placeholder="Description"
+                          className="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] text-white placeholder-white/25 focus:border-violet-400/60 focus:outline-none"
+                        />
+                        <input
+                          type="number"
+                          value={newPrice}
+                          onChange={(e) => setNewPrice(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && addNewToLibrary()}
+                          placeholder="₹ Price"
+                          className="w-20 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-right text-[11px] text-white placeholder-white/25 focus:border-violet-400/60 focus:outline-none"
+                        />
+                        <button
+                          onClick={addNewToLibrary}
+                          className="rounded-lg bg-violet-600 px-2.5 py-1.5 text-[11px] font-bold text-white hover:bg-violet-500"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => { setShowAddForm(false); setNewDesc(""); setNewPrice(""); }}
+                          className="rounded-lg px-2 py-1.5 text-[11px] text-white/30 hover:text-white"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setShowAddForm(true)}
+                        className="mt-2 inline-flex items-center gap-1 text-[11px] text-violet-400/60 hover:text-violet-300"
+                      >
+                        <Plus size={11} />
+                        Add new item to library
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* ── Active line items ────────────────────────────────────── */}
+              <div className="mb-2 grid grid-cols-[1fr_50px_86px_70px_26px_26px] gap-2 text-[10px] font-bold uppercase text-white/30">
                 <span>Description</span>
                 <span className="text-center">Qty</span>
                 <span className="text-right">Unit Price</span>
                 <span className="text-right">Total</span>
+                <span title="Save to library" className="text-center">
+                  <Bookmark size={10} className="mx-auto opacity-50" />
+                </span>
                 <span />
               </div>
+
               <div className="flex flex-col gap-2">
                 {data.items.map((item) => {
                   const rowTotal = item.qty * item.unitPrice;
+                  const isSaved = savedItems.some(
+                    (s) =>
+                      s.description.toLowerCase() === item.description.toLowerCase()
+                  );
+                  const isFlashing = savedFlash === item.id;
                   return (
                     <div
                       key={item.id}
-                      className="grid grid-cols-[1fr_56px_88px_80px_32px] items-center gap-2"
+                      className="grid grid-cols-[1fr_50px_86px_70px_26px_26px] items-center gap-2"
                     >
                       <input
                         value={item.description}
                         onChange={(e) =>
                           updateItem(item.id, "description", e.target.value)
                         }
-                        placeholder="Description…"
-                        className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/20 focus:border-violet-400/60 focus:outline-none"
+                        placeholder="Item description…"
+                        className={inputCls}
                       />
                       <input
                         type="number"
@@ -516,7 +814,7 @@ export default function ReceiptGenerator() {
                         onChange={(e) =>
                           updateItem(item.id, "qty", parseFloat(e.target.value) || 0)
                         }
-                        className="w-full rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-center text-sm text-white focus:border-violet-400/60 focus:outline-none"
+                        className="w-full rounded-lg border border-white/10 bg-white/5 px-2 py-2 text-center text-sm text-white focus:border-violet-400/60 focus:outline-none transition"
                       />
                       <input
                         type="number"
@@ -525,39 +823,61 @@ export default function ReceiptGenerator() {
                         onChange={(e) =>
                           updateItem(item.id, "unitPrice", parseFloat(e.target.value) || 0)
                         }
-                        className="w-full rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-right text-sm text-white focus:border-violet-400/60 focus:outline-none"
+                        className="w-full rounded-lg border border-white/10 bg-white/5 px-2 py-2 text-right text-sm text-white focus:border-violet-400/60 focus:outline-none transition"
                       />
-                      <span className="text-right text-sm font-semibold text-emerald-300">
+                      <span className="text-right text-xs font-semibold text-emerald-300">
                         {formatINR(rowTotal)}
                       </span>
+                      {/* Save to library */}
+                      <button
+                        onClick={() => saveRowToLibrary(item)}
+                        disabled={!item.description.trim() || isSaved}
+                        title={isSaved ? "Already in library" : "Save to library"}
+                        className={`grid h-6 w-6 place-items-center rounded-md transition ${
+                          isFlashing
+                            ? "bg-emerald-500/25 text-emerald-300"
+                            : isSaved
+                            ? "cursor-default text-violet-400/40"
+                            : "text-white/20 hover:bg-violet-500/20 hover:text-violet-300 disabled:opacity-20"
+                        }`}
+                      >
+                        {isFlashing || isSaved ? (
+                          <BookmarkCheck size={12} />
+                        ) : (
+                          <Bookmark size={12} />
+                        )}
+                      </button>
+                      {/* Delete row */}
                       <button
                         onClick={() => removeItem(item.id)}
                         disabled={data.items.length === 1}
-                        className="grid h-8 w-8 place-items-center rounded-lg text-white/30 transition hover:bg-red-500/20 hover:text-red-400 disabled:opacity-20"
+                        className="grid h-6 w-6 place-items-center rounded-md text-white/20 transition hover:bg-red-500/20 hover:text-red-400 disabled:opacity-20"
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={12} />
                       </button>
                     </div>
                   );
                 })}
               </div>
+
               <button
                 onClick={addItem}
-                className="mt-4 inline-flex items-center gap-2 rounded-xl border border-dashed border-white/20 px-4 py-2 text-sm text-white/40 transition hover:border-violet-400/50 hover:text-violet-300"
+                className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-dashed border-white/15 px-3 py-1.5 text-xs text-white/35 transition hover:border-violet-400/50 hover:text-violet-300"
               >
-                <Plus size={14} />
-                Add item
+                <Plus size={12} />
+                Add blank item
               </button>
             </div>
 
+
             {/* Charges & Notes */}
             <div className="glass rounded-2xl p-5">
-              <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-white/60">
+              <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-white/50">
                 Charges &amp; Notes
               </h2>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-white/50">
+                  <label className="mb-1 block text-[11px] font-semibold text-white/40">
                     Discount (₹)
                   </label>
                   <input
@@ -565,11 +885,11 @@ export default function ReceiptGenerator() {
                     min={0}
                     value={data.discount}
                     onChange={(e) => set("discount", parseFloat(e.target.value) || 0)}
-                    className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-violet-400/60 focus:outline-none"
+                    className={inputCls}
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-white/50">
+                  <label className="mb-1 block text-[11px] font-semibold text-white/40">
                     Shipping / Handling (₹)
                   </label>
                   <input
@@ -577,179 +897,112 @@ export default function ReceiptGenerator() {
                     min={0}
                     value={data.shipping}
                     onChange={(e) => set("shipping", parseFloat(e.target.value) || 0)}
-                    className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-violet-400/60 focus:outline-none"
+                    className={inputCls}
                   />
                 </div>
               </div>
-              <div className="mt-3 flex items-center gap-3">
-                <label className="flex cursor-pointer items-center gap-2 text-sm text-white/60">
-                  <input
-                    type="checkbox"
-                    checked={data.taxIncluded}
-                    onChange={(e) => set("taxIncluded", e.target.checked)}
-                    className="h-4 w-4 rounded accent-violet-500"
-                  />
-                  Tax included in price
-                </label>
-              </div>
+              <label className="mt-3 flex cursor-pointer items-center gap-2 text-xs text-white/50">
+                <input
+                  type="checkbox"
+                  checked={data.taxIncluded}
+                  onChange={(e) => set("taxIncluded", e.target.checked)}
+                  className="h-3.5 w-3.5 rounded accent-violet-500"
+                />
+                Tax included in price
+              </label>
               <div className="mt-3">
-                <label className="mb-1 block text-xs font-semibold text-white/50">
+                <label className="mb-1 block text-[11px] font-semibold text-white/40">
                   Remarks / Notes
                 </label>
                 <textarea
                   rows={2}
                   value={data.remarks}
                   onChange={(e) => set("remarks", e.target.value)}
-                  className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/20 focus:border-violet-400/60 focus:outline-none"
+                  placeholder="Any notes or remarks…"
+                  className="w-full resize-none rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/25 focus:border-violet-400/60 focus:outline-none transition"
                 />
               </div>
             </div>
           </div>
 
-          {/* ── RIGHT: Receipt Preview ──────────────────────────────────── */}
+          {/* ── RIGHT: Preview ──────────────────────────────────────────── */}
           <div className="lg:sticky lg:top-24 lg:self-start">
-            <p className="mb-3 text-center text-xs font-semibold uppercase tracking-widest text-white/30">
+            <p className="mb-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-white/25">
               Live Preview
             </p>
+
+            {/* Receipt card */}
             <div
               ref={printRef}
               id="receipt-preview"
-              className="receipt-print-area overflow-hidden rounded-2xl bg-white shadow-[0_30px_100px_rgba(0,0,0,0.6)]"
+              className="receipt-print-area overflow-hidden rounded-2xl bg-white shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
             >
-              {/* Top navy bar */}
-              <div style={{ background: "#0D1B4D", height: 12 }} />
+              {/* Top accent bar */}
+              <div style={{ background: "#0D1B4D", height: 8 }} />
 
-              {/* Header */}
+              {/* Header: RECEIPT title + Logo */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "20px 24px 10px",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 20,
+                    fontWeight: 900,
+                    color: "#0D1B4D",
+                    letterSpacing: 4,
+                    fontFamily: "Arial, sans-serif",
+                    opacity: 0.18,
+                  }}
+                >
+                  RECEIPT
+                </div>
+                {/* Real logo */}
+                <Image
+                  src="/Aibi_Primary Logo_Gradient.png"
+                  alt="Aibi Campus Logo"
+                  width={130}
+                  height={52}
+                  style={{ objectFit: "contain" }}
+                  priority
+                />
+              </div>
+
+              {/* Company info + date/receipt# */}
               <div
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "flex-start",
-                  padding: "24px 28px 12px",
-                  background: "#fff",
+                  padding: "0 24px 14px",
+                  borderBottom: "1px solid #e9eaef",
+                  fontFamily: "Arial, sans-serif",
                 }}
               >
                 <div>
-                  <div
-                    style={{
-                      fontSize: 22,
-                      fontWeight: 800,
-                      color: "#888",
-                      letterSpacing: 3,
-                      fontFamily: "Arial, sans-serif",
-                    }}
-                  >
-                    RECEIPT
-                  </div>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  {/* AIBI Logo placeholder */}
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      justifyContent: "flex-end",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: 48,
-                        height: 48,
-                        background: "linear-gradient(135deg,#00b4d8,#7b2ff7)",
-                        borderRadius: 10,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontWeight: 900,
-                        fontSize: 18,
-                        color: "#fff",
-                        fontFamily: "Arial, sans-serif",
-                        letterSpacing: -1,
-                      }}
-                    >
-                      ai<span style={{ color: "#a5f3fc" }}>bi</span>
-                    </div>
-                    <div style={{ lineHeight: 1.2 }}>
-                      <div
-                        style={{
-                          fontSize: 10,
-                          fontWeight: 700,
-                          color: "#0D1B4D",
-                          fontFamily: "Arial, sans-serif",
-                        }}
-                      >
-                        Ai &amp; Business
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 10,
-                          fontWeight: 700,
-                          color: "#0D1B4D",
-                          fontFamily: "Arial, sans-serif",
-                        }}
-                      >
-                        Innovation
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 10,
-                          fontWeight: 700,
-                          color: "#0D1B4D",
-                          fontFamily: "Arial, sans-serif",
-                        }}
-                      >
-                        Campus
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Company info + Date */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  padding: "0 28px 16px",
-                  background: "#fff",
-                  borderBottom: "1px solid #e5e7eb",
-                }}
-              >
-                <div style={{ fontFamily: "Arial, sans-serif" }}>
-                  <div style={{ fontWeight: 700, fontSize: 11, color: "#111" }}>
+                  <div style={{ fontWeight: 700, fontSize: 10.5, color: "#111" }}>
                     INFERA AIBI CAMPUS PVT LTD
                   </div>
-                  <div style={{ fontSize: 10, color: "#555", marginTop: 2 }}>
-                    Edappally,Kochi,Ernakulam
+                  <div style={{ fontSize: 9, color: "#666", marginTop: 2, lineHeight: 1.6 }}>
+                    Edappally, Kochi, Ernakulam<br />
+                    Kerala 682024<br />
+                    +91 9746067949
                   </div>
-                  <div style={{ fontSize: 10, color: "#555" }}>Kerala 682024</div>
-                  <div style={{ fontSize: 10, color: "#555" }}>+91 9746067949</div>
-                  <div style={{ fontSize: 10, color: "#2563eb" }}>hr@aibicampus.com</div>
+                  <div style={{ fontSize: 9, color: "#2563eb" }}>hr@aibicampus.com</div>
                 </div>
-                <div
-                  style={{
-                    textAlign: "right",
-                    fontFamily: "Arial, sans-serif",
-                  }}
-                >
-                  <div style={{ fontSize: 10, color: "#c00", fontWeight: 700 }}>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 9, color: "#c00", fontWeight: 700 }}>
                     {data.date}
                   </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 6,
-                      marginTop: 6,
-                    }}
-                  >
-                    <span style={{ fontSize: 9, color: "#555" }}>Receipt No. :</span>
-                    <span
-                      style={{ fontSize: 10, fontWeight: 700, color: "#0D1B4D" }}
-                    >
-                      {data.receiptNumber}
-                    </span>
+                  <div style={{ marginTop: 4, fontSize: 8, color: "#888" }}>
+                    Receipt No.
+                  </div>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: "#0D1B4D" }}>
+                    {data.receiptNumber}
                   </div>
                 </div>
               </div>
@@ -759,38 +1012,40 @@ export default function ReceiptGenerator() {
                 style={{
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr",
-                  gap: 0,
-                  padding: "16px 28px",
-                  background: "#fff",
+                  padding: "12px 24px",
+                  gap: 16,
+                  borderBottom: "1px solid #e9eaef",
+                  fontFamily: "Arial, sans-serif",
                 }}
               >
                 {(["billTo", "shipTo"] as const).map((k) => (
-                  <div key={k} style={{ paddingRight: k === "billTo" ? 16 : 0 }}>
+                  <div key={k}>
                     <div
                       style={{
-                        fontSize: 8,
-                        fontWeight: 700,
+                        fontSize: 7.5,
+                        fontWeight: 800,
                         color: "#0D1B4D",
-                        letterSpacing: 1,
-                        fontFamily: "Arial, sans-serif",
+                        letterSpacing: 1.2,
                         textTransform: "uppercase",
                         borderBottom: "1.5px solid #0D1B4D",
                         paddingBottom: 3,
-                        marginBottom: 6,
+                        marginBottom: 5,
                       }}
                     >
                       {k === "billTo" ? "Bill To" : "Ship To"}
                     </div>
-                    <div
-                      style={{ fontFamily: "Arial, sans-serif", fontSize: 10 }}
-                    >
+                    <div style={{ fontSize: 9.5, lineHeight: 1.6 }}>
                       <div style={{ fontWeight: 700, color: "#111" }}>
                         {data[k].name || <span style={{ color: "#ccc" }}>—</span>}
                       </div>
-                      <div style={{ color: "#2563eb" }}>{data[k].phone}</div>
-                      <div style={{ color: "#555" }}>{data[k].email}</div>
+                      {data[k].phone && (
+                        <div style={{ color: "#2563eb" }}>{data[k].phone}</div>
+                      )}
+                      {data[k].email && (
+                        <div style={{ color: "#555" }}>{data[k].email}</div>
+                      )}
                       {data[k].address && (
-                        <div style={{ color: "#555" }}>{data[k].address}</div>
+                        <div style={{ color: "#777" }}>{data[k].address}</div>
                       )}
                     </div>
                   </div>
@@ -798,32 +1053,31 @@ export default function ReceiptGenerator() {
               </div>
 
               {/* Items table */}
-              <div style={{ padding: "0 28px 0" }}>
+              <div style={{ padding: "0 24px" }}>
                 <table
                   style={{
                     width: "100%",
                     borderCollapse: "collapse",
                     fontFamily: "Arial, sans-serif",
-                    fontSize: 9,
+                    fontSize: 8.5,
                   }}
                 >
                   <thead>
                     <tr style={{ background: "#0D1B4D", color: "#fff" }}>
-                      {["DESCRIPTION", "QTY", "UNIT PRICE", "TOTAL"].map(
-                        (h) => (
-                          <th
-                            key={h}
-                            style={{
-                              padding: "6px 8px",
-                              textAlign: h === "DESCRIPTION" ? "left" : "right",
-                              fontWeight: 700,
-                              letterSpacing: 0.5,
-                            }}
-                          >
-                            {h}
-                          </th>
-                        )
-                      )}
+                      {["DESCRIPTION", "QTY", "UNIT PRICE", "TOTAL"].map((h) => (
+                        <th
+                          key={h}
+                          style={{
+                            padding: "6px 8px",
+                            textAlign: h === "DESCRIPTION" ? "left" : "right",
+                            fontWeight: 700,
+                            letterSpacing: 0.5,
+                            fontSize: 8,
+                          }}
+                        >
+                          {h}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
@@ -831,67 +1085,40 @@ export default function ReceiptGenerator() {
                       <tr
                         key={item.id}
                         style={{
-                          background: idx % 2 === 0 ? "#fff" : "#f5f5fa",
-                          borderBottom: "1px solid #e5e7eb",
+                          background: idx % 2 === 0 ? "#fff" : "#f7f7fc",
+                          borderBottom: "1px solid #eaebf0",
                         }}
                       >
-                        <td style={{ padding: "5px 8px", color: "#222" }}>
+                        <td style={{ padding: "5px 8px", color: "#1a1a1a" }}>
                           {item.description || ""}
                         </td>
-                        <td
-                          style={{
-                            padding: "5px 8px",
-                            textAlign: "right",
-                            color: "#555",
-                          }}
-                        >
+                        <td style={{ padding: "5px 8px", textAlign: "right", color: "#555" }}>
                           {item.qty}
                         </td>
-                        <td
-                          style={{
-                            padding: "5px 8px",
-                            textAlign: "right",
-                            color: "#555",
-                          }}
-                        >
-                          {formatINR(item.unitPrice)}
+                        <td style={{ padding: "5px 8px", textAlign: "right", color: "#555" }}>
+                          ₹ {formatINR(item.unitPrice)}
                         </td>
-                        <td
-                          style={{
-                            padding: "5px 8px",
-                            textAlign: "right",
-                            color: "#222",
-                            fontWeight: 600,
-                          }}
-                        >
-                          {formatINR(item.qty * item.unitPrice)}
+                        <td style={{ padding: "5px 8px", textAlign: "right", color: "#111", fontWeight: 600 }}>
+                          ₹ {formatINR(item.qty * item.unitPrice)}
                         </td>
                       </tr>
                     ))}
-                    {/* Padding rows up to 10 */}
                     {Array.from({
-                      length: Math.max(0, 10 - data.items.length),
+                      length: Math.max(0, 8 - data.items.length),
                     }).map((_, i) => (
                       <tr
                         key={`pad-${i}`}
                         style={{
                           background:
-                            (data.items.length + i) % 2 === 0 ? "#fff" : "#f5f5fa",
-                          borderBottom: "1px solid #e5e7eb",
+                            (data.items.length + i) % 2 === 0 ? "#fff" : "#f7f7fc",
+                          borderBottom: "1px solid #eaebf0",
                         }}
                       >
                         <td style={{ padding: "5px 8px" }}>&nbsp;</td>
                         <td style={{ padding: "5px 8px" }} />
                         <td style={{ padding: "5px 8px" }} />
-                        <td
-                          style={{
-                            padding: "5px 8px",
-                            textAlign: "right",
-                            color: "#aaa",
-                            fontSize: 8,
-                          }}
-                        >
-                          0.00
+                        <td style={{ padding: "5px 8px", textAlign: "right", color: "#ddd", fontSize: 7.5 }}>
+                          —
                         </td>
                       </tr>
                     ))}
@@ -899,42 +1126,51 @@ export default function ReceiptGenerator() {
                 </table>
               </div>
 
-              {/* Totals + remarks */}
+              {/* Totals + Remarks row */}
               <div
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "flex-end",
-                  padding: "14px 28px 8px",
-                  background: "#fff",
+                  padding: "12px 24px 6px",
                   fontFamily: "Arial, sans-serif",
                 }}
               >
-                <div style={{ fontSize: 9, color: "#888", maxWidth: 200 }}>
+                {/* Remarks */}
+                <div
+                  style={{
+                    fontSize: 8,
+                    color: "#aaa",
+                    maxWidth: 160,
+                    fontStyle: "italic",
+                    lineHeight: 1.5,
+                  }}
+                >
                   {data.remarks}
                 </div>
-                <div style={{ minWidth: 220 }}>
+
+                {/* Totals */}
+                <div style={{ minWidth: 210 }}>
                   {[
-                    ["SUBTOTAL", formatINR(subtotal)],
-                    ["DISCOUNT", formatINR(discountAmt)],
-                    ["SUBTOTAL LESS DISCOUNT", formatINR(subtotalLessDiscount)],
-                    ["TAX RATE", data.taxIncluded ? "INCLUDED" : "0.00"],
-                    ["TOTAL TAX", data.taxIncluded ? "INCLUDED" : "0.00"],
-                    ["SHIPPING/HANDLING", formatINR(data.shipping)],
+                    ["Subtotal", `₹ ${formatINR(subtotal)}`],
+                    ["Discount", `- ₹ ${formatINR(discountAmt)}`],
+                    ["Subtotal less discount", `₹ ${formatINR(subtotalLessDiscount)}`],
+                    ["Tax", data.taxIncluded ? "Included" : "₹ 0.00"],
+                    ["Shipping / Handling", `₹ ${formatINR(data.shipping)}`],
                   ].map(([lbl, val]) => (
                     <div
                       key={lbl}
                       style={{
                         display: "flex",
                         justifyContent: "space-between",
-                        borderBottom: "1px solid #e5e7eb",
-                        padding: "3px 0",
-                        fontSize: 9,
-                        color: "#555",
+                        borderBottom: "1px solid #eaebf0",
+                        padding: "2.5px 0",
+                        fontSize: 8.5,
+                        color: "#666",
                       }}
                     >
                       <span>{lbl}</span>
-                      <span style={{ color: "#222" }}>{val}</span>
+                      <span style={{ color: "#222", fontWeight: 500 }}>{val}</span>
                     </div>
                   ))}
                 </div>
@@ -945,33 +1181,27 @@ export default function ReceiptGenerator() {
                 style={{
                   display: "flex",
                   justifyContent: "flex-end",
-                  padding: "6px 28px 14px",
-                  background: "#fff",
+                  padding: "8px 24px 14px",
                   fontFamily: "Arial, sans-serif",
                 }}
               >
                 <div
                   style={{
-                    display: "flex",
+                    background: "#0D1B4D",
+                    borderRadius: 8,
+                    padding: "7px 16px",
+                    display: "inline-flex",
                     alignItems: "center",
-                    gap: 12,
-                    minWidth: 220,
+                    gap: 10,
+                    minWidth: 210,
+                    justifyContent: "space-between",
                   }}
                 >
-                  <span
-                    style={{ fontSize: 13, fontWeight: 700, color: "#0D1B4D" }}
-                  >
-                    Paid ₹
+                  <span style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.7)", letterSpacing: 1 }}>
+                    PAID
                   </span>
-                  <span
-                    style={{
-                      fontSize: 18,
-                      fontWeight: 900,
-                      color: "#0D1B4D",
-                      marginLeft: "auto",
-                    }}
-                  >
-                    {formatINR(total)}
+                  <span style={{ fontSize: 15, fontWeight: 900, color: "#fff" }}>
+                    ₹ {formatINR(total)}
                   </span>
                 </div>
               </div>
@@ -980,50 +1210,49 @@ export default function ReceiptGenerator() {
               <div
                 style={{
                   background: "#0D1B4D",
-                  padding: "10px 28px",
                   borderTop: "3px solid #00b4d8",
+                  padding: "8px 24px",
                 }}
               >
                 <p
                   style={{
                     margin: 0,
-                    fontSize: 8,
-                    color: "#fff",
+                    fontSize: 7.5,
+                    color: "rgba(255,255,255,0.65)",
                     textAlign: "center",
                     fontFamily: "Arial, sans-serif",
                   }}
                 >
-                  Note : This is a computer-generated receipt and does not require a
-                  physical signature.
+                  Note : This is a computer-generated receipt and does not require a physical signature.
                 </p>
               </div>
             </div>
 
-            {/* Action row below preview */}
-            <div className="mt-4 flex justify-center gap-3">
+            {/* Action buttons below preview */}
+            <div className="mt-4 flex justify-center gap-2.5">
               <button
                 onClick={downloadPDF}
-                className="group inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(139,92,246,0.4)] transition hover:scale-[1.02]"
+                className="group inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-2.5 text-xs font-bold text-white shadow-[0_4px_18px_rgba(139,92,246,0.35)] transition hover:scale-[1.02]"
               >
-                <Download size={15} />
+                <Download size={13} />
                 PDF
                 <ArrowRight
-                  size={13}
-                  className="transition-transform group-hover:translate-x-1"
+                  size={11}
+                  className="transition-transform group-hover:translate-x-0.5"
                 />
               </button>
               <button
                 onClick={downloadSheet}
-                className="group inline-flex items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-6 py-2.5 text-sm font-semibold text-emerald-300 transition hover:bg-emerald-500/20"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-5 py-2.5 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-500/20"
               >
-                <FileSpreadsheet size={15} />
+                <FileSpreadsheet size={13} />
                 Excel
               </button>
               <button
                 onClick={handlePrint}
-                className="group inline-flex items-center gap-2 rounded-xl border border-blue-400/30 bg-blue-500/10 px-6 py-2.5 text-sm font-semibold text-blue-300 transition hover:bg-blue-500/20"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-sky-400/30 bg-sky-500/10 px-5 py-2.5 text-xs font-semibold text-sky-300 transition hover:bg-sky-500/20"
               >
-                <Printer size={15} />
+                <Printer size={13} />
                 Print
               </button>
             </div>
