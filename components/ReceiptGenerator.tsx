@@ -470,11 +470,12 @@ export default function ReceiptGenerator() {
 
       // 9. Totals Section (right-aligned)
       const totalsList: [string, string][] = [
-        ["Subtotal", `Rs. ${formatINR(subtotal)}`],
-        ["Discount", `- Rs. ${formatINR(discountAmt)}`],
-        ["Subtotal less discount", `Rs. ${formatINR(subtotalLessDiscount)}`],
-        ["Tax", data.taxIncluded ? "Included" : "Rs. 0.00"],
-        ["Shipping / Handling", `Rs. ${formatINR(data.shipping)}`],
+        ["SUBTOTAL", `₹ ${formatINR(subtotal)}`],
+        ["DISCOUNT", `- ₹ ${formatINR(discountAmt)}`],
+        ["SUBTOTAL LESS DISCOUNT", `₹ ${formatINR(subtotalLessDiscount)}`],
+        ["TAX RATE", data.taxIncluded ? "Included" : "0%"],
+        ["TOTAL TAX", data.taxIncluded ? "Included" : "₹ 0.00"],
+        ["SHIPPING/HANDLING", `₹ ${formatINR(data.shipping)}`],
       ];
 
       let ty = finalY;
@@ -484,7 +485,7 @@ export default function ReceiptGenerator() {
         doc.setTextColor(102, 102, 102); // #666
         doc.text(label, W - 72, ty);
 
-        doc.setFont("helvetica", label.includes("less") ? "bold" : "normal");
+        doc.setFont("helvetica", label.includes("LESS") ? "bold" : "normal");
         doc.setTextColor(34, 34, 34); // #222
         doc.text(val, W - 14, ty, { align: "right" });
 
@@ -503,13 +504,13 @@ export default function ReceiptGenerator() {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(8.5);
       doc.setTextColor(180, 185, 205); // white opacity
-      doc.text("PAID", W - 67, ty + 8.2);
+      doc.text("Paid", W - 67, ty + 8.2);
 
       // Amount
       doc.setFont("helvetica", "bold");
       doc.setFontSize(13);
       doc.setTextColor(255, 255, 255);
-      doc.text(`Rs. ${formatINR(total)}`, W - 19, ty + 8.2, { align: "right" });
+      doc.text(`₹ ${formatINR(total)}`, W - 19, ty + 8.2, { align: "right" });
 
       // 11. Remarks / Notes
       if (data.remarks) {
@@ -1240,11 +1241,12 @@ export default function ReceiptGenerator() {
                 {/* Totals */}
                 <div style={{ minWidth: 210 }}>
                   {[
-                    ["Subtotal", `₹ ${formatINR(subtotal)}`],
-                    ["Discount", `- ₹ ${formatINR(discountAmt)}`],
-                    ["Subtotal less discount", `₹ ${formatINR(subtotalLessDiscount)}`],
-                    ["Tax", data.taxIncluded ? "Included" : "₹ 0.00"],
-                    ["Shipping / Handling", `₹ ${formatINR(data.shipping)}`],
+                    ["SUBTOTAL", `₹ ${formatINR(subtotal)}`],
+                    ["DISCOUNT", `- ₹ ${formatINR(discountAmt)}`],
+                    ["SUBTOTAL LESS DISCOUNT", `₹ ${formatINR(subtotalLessDiscount)}`],
+                    ["TAX RATE", data.taxIncluded ? "Included" : "0%"],
+                    ["TOTAL TAX", data.taxIncluded ? "Included" : "₹ 0.00"],
+                    ["SHIPPING/HANDLING", `₹ ${formatINR(data.shipping)}`],
                   ].map(([lbl, val]) => (
                     <div
                       key={lbl}
@@ -1257,7 +1259,7 @@ export default function ReceiptGenerator() {
                         color: "#666",
                       }}
                     >
-                      <span>{lbl}</span>
+                      <span style={{ fontWeight: lbl.includes("LESS") ? 600 : 400 }}>{lbl}</span>
                       <span style={{ color: "#222", fontWeight: 500 }}>{val}</span>
                     </div>
                   ))}
@@ -1286,7 +1288,7 @@ export default function ReceiptGenerator() {
                   }}
                 >
                   <span style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.7)", letterSpacing: 1 }}>
-                    PAID
+                    Paid
                   </span>
                   <span style={{ fontSize: 15, fontWeight: 900, color: "#fff" }}>
                     ₹ {formatINR(total)}
