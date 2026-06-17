@@ -80,12 +80,31 @@ function currentReceiptNumber(): string {
 }
 
 /** Increment counter and return new number */
-function nextReceiptNumber(): string {
+function nextReceiptNumber(currentNumber?: string): string {
   if (typeof window === "undefined") return "REC/DIG/001";
-  const stored = localStorage.getItem("receipt_counter");
-  const num = stored ? parseInt(stored, 10) + 1 : 714;
+  
+  let num = 714;
+  let prefix = "REC/DIG/";
+  let padLength = 3;
+
+  if (currentNumber) {
+    const match = currentNumber.match(/^(.*?)(\d+)$/);
+    if (match) {
+      prefix = match[1];
+      const numStr = match[2];
+      padLength = numStr.length;
+      num = parseInt(numStr, 10) + 1;
+    } else {
+      const stored = localStorage.getItem("receipt_counter");
+      num = stored ? parseInt(stored, 10) + 1 : 714;
+    }
+  } else {
+    const stored = localStorage.getItem("receipt_counter");
+    num = stored ? parseInt(stored, 10) + 1 : 714;
+  }
+  
   localStorage.setItem("receipt_counter", String(num));
-  return `REC/DIG/${String(num).padStart(3, "0")}`;
+  return `${prefix}${String(num).padStart(padLength, "0")}`;
 }
 
 const EMPTY_ADDRESS: AddressBlock = { name: "", phone: "", email: "", address: "" };
@@ -275,7 +294,7 @@ export default function ReceiptGenerator() {
     }));
 
   const newReceipt = () => {
-    const next = nextReceiptNumber();
+    const next = nextReceiptNumber(data.receiptNumber);
     setData({
       receiptNumber: next,
       date: todayStr(),
