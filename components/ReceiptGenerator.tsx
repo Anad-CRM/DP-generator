@@ -82,7 +82,7 @@ function currentReceiptNumber(): string {
 /** Increment counter and return new number */
 function nextReceiptNumber(currentNumber?: string): string {
   if (typeof window === "undefined") return "REC/DIG/001";
-  
+
   let num = 714;
   let prefix = "REC/DIG/";
   let padLength = 3;
@@ -102,7 +102,7 @@ function nextReceiptNumber(currentNumber?: string): string {
     const stored = localStorage.getItem("receipt_counter");
     num = stored ? parseInt(stored, 10) + 1 : 714;
   }
-  
+
   localStorage.setItem("receipt_counter", String(num));
   return `${prefix}${String(num).padStart(padLength, "0")}`;
 }
@@ -337,7 +337,7 @@ export default function ReceiptGenerator() {
         const logoW = 48; // width in mm
         const logoH = (img.height / img.width) * logoW;
         doc.addImage(dataUrl, "PNG", W - 14 - logoW, 14, logoW, logoH);
-      } catch (_) {}
+      } catch (_) { }
 
       // 3. "RECEIPT" background watermark title
       doc.setFontSize(20);
@@ -401,7 +401,7 @@ export default function ReceiptGenerator() {
         doc.setTextColor(17, 17, 17);
         doc.text(block.name || "—", x, y);
         y += 4.5;
-        
+
         doc.setFont("helvetica", "normal");
         if (block.phone) {
           doc.setTextColor(37, 99, 235); // Blue
@@ -483,28 +483,28 @@ export default function ReceiptGenerator() {
         doc.setFont("helvetica", "normal");
         doc.setTextColor(102, 102, 102); // #666
         doc.text(label, W - 72, ty);
-        
+
         doc.setFont("helvetica", label.includes("less") ? "bold" : "normal");
         doc.setTextColor(34, 34, 34); // #222
         doc.text(val, W - 14, ty, { align: "right" });
-        
+
         doc.setDrawColor(234, 235, 240);
         doc.setLineWidth(0.15);
         doc.line(W - 72, ty + 1.5, W - 14, ty + 1.5);
-        
+
         ty += 5.5;
       });
 
       // 10. Paid Box (centered text alignment)
       doc.setFillColor(13, 27, 77); // Navy blue: #0D1B4D
       doc.roundedRect(W - 72, ty + 1.5, 58, 10, 1.5, 1.5, "F");
-      
+
       // "PAID" tag
       doc.setFont("helvetica", "bold");
       doc.setFontSize(8.5);
       doc.setTextColor(180, 185, 205); // white opacity
       doc.text("PAID", W - 67, ty + 8.2);
-      
+
       // Amount
       doc.setFont("helvetica", "bold");
       doc.setFontSize(13);
@@ -722,11 +722,10 @@ export default function ReceiptGenerator() {
                 </h2>
                 <button
                   onClick={copyBillToShip}
-                  className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
-                    copied
-                      ? "bg-emerald-500/20 text-emerald-300"
-                      : "border border-violet-400/30 bg-violet-500/10 text-violet-300 hover:bg-violet-500/20"
-                  }`}
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${copied
+                    ? "bg-emerald-500/20 text-emerald-300"
+                    : "border border-violet-400/30 bg-violet-500/10 text-violet-300 hover:bg-violet-500/20"
+                    }`}
                 >
                   <Copy size={11} />
                   {copied ? "Copied!" : "Copy from Bill To"}
@@ -923,13 +922,12 @@ export default function ReceiptGenerator() {
                         onClick={() => saveRowToLibrary(item)}
                         disabled={!item.description.trim() || isSaved}
                         title={isSaved ? "Already in library" : "Save to library"}
-                        className={`grid h-6 w-6 place-items-center rounded-md transition ${
-                          isFlashing
-                            ? "bg-emerald-500/25 text-emerald-300"
-                            : isSaved
+                        className={`grid h-6 w-6 place-items-center rounded-md transition ${isFlashing
+                          ? "bg-emerald-500/25 text-emerald-300"
+                          : isSaved
                             ? "cursor-default text-violet-400/40"
                             : "text-white/20 hover:bg-violet-500/20 hover:text-violet-300 disabled:opacity-20"
-                        }`}
+                          }`}
                       >
                         {isFlashing || isSaved ? (
                           <BookmarkCheck size={12} />
