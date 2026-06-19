@@ -72,39 +72,56 @@ function todayStr() {
 }
 
 /** Read current counter without incrementing */
-function currentReceiptNumber(): string {
+async function currentReceiptNumber(): Promise<string> {
   if (typeof window === "undefined") return "REC/DIG/001";
-  const stored = localStorage.getItem("receipt_counter");
-  const num = stored ? parseInt(stored, 10) : 713;
-  return `REC/DIG/${String(num).padStart(3, "0")}`;
+  try {
+    const res = await fetch("/api/receipt-number");
+    if (!res.ok) throw new Error();
+    const json = await res.json();
+    return json.receiptNumber;
+  } catch (err) {
+    const stored = localStorage.getItem("receipt_counter");
+    const num = stored ? parseInt(stored, 10) : 713;
+    return `REC/DIG/${String(num).padStart(3, "0")}`;
+  }
 }
 
 /** Increment counter and return new number */
-function nextReceiptNumber(currentNumber?: string): string {
+async function nextReceiptNumber(currentNumber?: string): Promise<string> {
   if (typeof window === "undefined") return "REC/DIG/001";
+  try {
+    const res = await fetch("/api/receipt-number", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currentNumber })
+    });
+    if (!res.ok) throw new Error();
+    const json = await res.json();
+    return json.receiptNumber;
+  } catch (err) {
+    let num = 714;
+    let prefix = "REC/DIG/";
+    let padLength = 3;
 
-  let num = 714;
-  let prefix = "REC/DIG/";
-  let padLength = 3;
-
-  if (currentNumber) {
-    const match = currentNumber.match(/^(.*?)(\d+)$/);
-    if (match) {
-      prefix = match[1];
-      const numStr = match[2];
-      padLength = numStr.length;
-      num = parseInt(numStr, 10) + 1;
+    if (currentNumber) {
+      const match = currentNumber.match(/^(.*?)(\d+)$/);
+      if (match) {
+        prefix = match[1];
+        const numStr = match[2];
+        padLength = numStr.length;
+        num = parseInt(numStr, 10) + 1;
+      } else {
+        const stored = localStorage.getItem("receipt_counter");
+        num = stored ? parseInt(stored, 10) + 1 : 714;
+      }
     } else {
       const stored = localStorage.getItem("receipt_counter");
       num = stored ? parseInt(stored, 10) + 1 : 714;
     }
-  } else {
-    const stored = localStorage.getItem("receipt_counter");
-    num = stored ? parseInt(stored, 10) + 1 : 714;
-  }
 
-  localStorage.setItem("receipt_counter", String(num));
-  return `${prefix}${String(num).padStart(padLength, "0")}`;
+    localStorage.setItem("receipt_counter", String(num));
+    return `${prefix}${String(num).padStart(padLength, "0")}`;
+  }
 }
 
 const EMPTY_ADDRESS: AddressBlock = { name: "", phone: "", email: "", address: "" };
@@ -181,7 +198,9 @@ export default function ReceiptGenerator() {
   // Initialize receipt number + saved items from localStorage on first mount
   React.useEffect(() => {
     if (!initialized) {
-      setData((d) => ({ ...d, receiptNumber: currentReceiptNumber() }));
+      currentReceiptNumber().then((num) => {
+        setData((d) => ({ ...d, receiptNumber: num }));
+      });
       setSavedItems(loadSavedItems());
       setInitialized(true);
     }
@@ -293,8 +312,8 @@ export default function ReceiptGenerator() {
       items: d.items.map((i) => (i.id === id ? { ...i, [field]: val } : i)),
     }));
 
-  const newReceipt = () => {
-    const next = nextReceiptNumber(data.receiptNumber);
+  const newReceipt = async () => {
+    const next = await nextReceiptNumber(data.receiptNumber);
     setData({
       receiptNumber: next,
       date: todayStr(),
@@ -339,10 +358,10 @@ export default function ReceiptGenerator() {
         doc.addImage(dataUrl, "PNG", W - 14 - logoW, 14, logoW, logoH);
       } catch (_) { }
 
-      // 3. "RECEIPT" background watermark title
+      // 3. "RECEIPT" title
       doc.setFontSize(20);
       doc.setFont("helvetica", "bold");
-      doc.setTextColor(215, 219, 230); // ~18% opacity of #0D1B4D
+      doc.setTextColor(13, 27, 77); // #0D1B4D
       doc.text("RECEIPT", 14, 25);
 
       // 4. Company info
@@ -431,12 +450,6 @@ export default function ReceiptGenerator() {
         `Rs. ${formatINR(i.qty * i.unitPrice)}`,
       ]);
 
-      // Add empty lines to match preview height (padded to at least 8 rows)
-      const padCount = Math.max(0, 8 - data.items.length);
-      for (let i = 0; i < padCount; i++) {
-        tableRows.push(["", "", "", "—"]);
-      }
-
       autoTable(doc, {
         startY: 92,
         head: [["DESCRIPTION", "QTY", "UNIT PRICE", "TOTAL"]],
@@ -470,12 +483,12 @@ export default function ReceiptGenerator() {
 
       // 9. Totals Section (right-aligned)
       const totalsList: [string, string][] = [
-        ["SUBTOTAL", `₹ ${formatINR(subtotal)}`],
-        ["DISCOUNT", `- ₹ ${formatINR(discountAmt)}`],
-        ["SUBTOTAL LESS DISCOUNT", `₹ ${formatINR(subtotalLessDiscount)}`],
+        ["SUBTOTAL", `Rs. ${formatINR(subtotal)}`],
+        ["DISCOUNT", `- Rs. ${formatINR(discountAmt)}`],
+        ["SUBTOTAL LESS DISCOUNT", `Rs. ${formatINR(subtotalLessDiscount)}`],
         ["TAX RATE", data.taxIncluded ? "Included" : "0%"],
-        ["TOTAL TAX", data.taxIncluded ? "Included" : "₹ 0.00"],
-        ["SHIPPING/HANDLING", `₹ ${formatINR(data.shipping)}`],
+        ["TOTAL TAX", data.taxIncluded ? "Included" : "Rs. 0.00"],
+        ["SHIPPING/HANDLING", `Rs. ${formatINR(data.shipping)}`],
       ];
 
       let ty = finalY;
@@ -510,7 +523,7 @@ export default function ReceiptGenerator() {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(13);
       doc.setTextColor(255, 255, 255);
-      doc.text(`₹ ${formatINR(total)}`, W - 19, ty + 8.2, { align: "right" });
+      doc.text(`Rs. ${formatINR(total)}`, W - 19, ty + 8.2, { align: "right" });
 
       // 11. Remarks / Notes
       if (data.remarks) {
@@ -1045,7 +1058,6 @@ export default function ReceiptGenerator() {
                     color: "#0D1B4D",
                     letterSpacing: 4,
                     fontFamily: "Arial, sans-serif",
-                    opacity: 0.18,
                   }}
                 >
                   RECEIPT
@@ -1192,25 +1204,7 @@ export default function ReceiptGenerator() {
                         </td>
                       </tr>
                     ))}
-                    {Array.from({
-                      length: Math.max(0, 8 - data.items.length),
-                    }).map((_, i) => (
-                      <tr
-                        key={`pad-${i}`}
-                        style={{
-                          background:
-                            (data.items.length + i) % 2 === 0 ? "#fff" : "#f7f7fc",
-                          borderBottom: "1px solid #eaebf0",
-                        }}
-                      >
-                        <td style={{ padding: "5px 8px" }}>&nbsp;</td>
-                        <td style={{ padding: "5px 8px" }} />
-                        <td style={{ padding: "5px 8px" }} />
-                        <td style={{ padding: "5px 8px", textAlign: "right", color: "#ddd", fontSize: 7.5 }}>
-                          —
-                        </td>
-                      </tr>
-                    ))}
+
                   </tbody>
                 </table>
               </div>
@@ -1241,12 +1235,12 @@ export default function ReceiptGenerator() {
                 {/* Totals */}
                 <div style={{ minWidth: 210 }}>
                   {[
-                    ["SUBTOTAL", `₹ ${formatINR(subtotal)}`],
-                    ["DISCOUNT", `- ₹ ${formatINR(discountAmt)}`],
-                    ["SUBTOTAL LESS DISCOUNT", `₹ ${formatINR(subtotalLessDiscount)}`],
+                    ["SUBTOTAL", `Rs. ${formatINR(subtotal)}`],
+                    ["DISCOUNT", `- Rs. ${formatINR(discountAmt)}`],
+                    ["SUBTOTAL LESS DISCOUNT", `Rs. ${formatINR(subtotalLessDiscount)}`],
                     ["TAX RATE", data.taxIncluded ? "Included" : "0%"],
-                    ["TOTAL TAX", data.taxIncluded ? "Included" : "₹ 0.00"],
-                    ["SHIPPING/HANDLING", `₹ ${formatINR(data.shipping)}`],
+                    ["TOTAL TAX", data.taxIncluded ? "Included" : "Rs. 0.00"],
+                    ["SHIPPING/HANDLING", `Rs. ${formatINR(data.shipping)}`],
                   ].map(([lbl, val]) => (
                     <div
                       key={lbl}
@@ -1291,7 +1285,7 @@ export default function ReceiptGenerator() {
                     Paid
                   </span>
                   <span style={{ fontSize: 15, fontWeight: 900, color: "#fff" }}>
-                    ₹ {formatINR(total)}
+                    Rs. {formatINR(total)}
                   </span>
                 </div>
               </div>
