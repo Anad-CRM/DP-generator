@@ -9,16 +9,16 @@ import {
 // ─── Canvas Renderers ─────────────────────────────────────────────────────────
 
 function tModernStack(ctx: CanvasRenderingContext2D, W: number, H: number, o: RenderOpts) {
-  const { photo, logoImg, tf, name, role, periodLabel, tagline, orgName, primary, secondary, bg, txt } = o;
+  const { photo, logoImg, tf, name, role, awardType, periodLabel, tagline, orgName, primary, secondary, bg, txt } = o;
   const light = txt !== "#ffffff";
-  
+
   // Dynamic Background: Soft gradient
   const grad = ctx.createLinearGradient(0, 0, W, H);
   grad.addColorStop(0, bg);
   grad.addColorStop(1, shade(bg, -15));
-  ctx.fillStyle = grad; 
+  ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, H);
-  
+
   // Subtle modern grid pattern
   ctx.save(); ctx.strokeStyle = primary + "0d"; ctx.lineWidth = 1;
   for (let x = 40; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
@@ -26,22 +26,22 @@ function tModernStack(ctx: CanvasRenderingContext2D, W: number, H: number, o: Re
   ctx.restore();
 
   const cX = W / 2, cardW = W * 0.8, cardH = H * 0.65;
-  
+
   // Main Card
-  ctx.save(); 
+  ctx.save();
   ctx.shadowColor = "rgba(0,0,0,0.08)"; ctx.shadowBlur = 40; ctx.shadowOffsetY = 20;
-  rrect(ctx, cX - cardW / 2, H * 0.20, cardW, cardH, 32); 
-  ctx.fillStyle = "#ffffff"; ctx.fill(); 
+  rrect(ctx, cX - cardW / 2, H * 0.2, cardW, cardH, 32);
+  ctx.fillStyle = "#ffffff"; ctx.fill();
   ctx.restore();
 
   // Subtle top accent line
   ctx.save();
-  rrect(ctx, cX - cardW / 2, H * 0.20, cardW, 8, 32);
+  rrect(ctx, cX - cardW / 2, H * 0.24, cardW, 8, 32);
   ctx.fillStyle = primary; ctx.fill();
   ctx.restore();
 
   // Profile Picture
-  const pR = W * 0.18, pCx = cX, pCy = H * 0.26;
+  const pR = W * 0.18, pCx = cX, pCy = H * 0.30;
   ctx.save(); ctx.shadowColor = "rgba(0,0,0,0.12)"; ctx.shadowBlur = 24; ctx.shadowOffsetY = 12;
   ctx.beginPath(); ctx.arc(pCx, pCy, pR + 8, 0, Math.PI * 2); ctx.fillStyle = "#ffffff"; ctx.fill(); ctx.restore();
   drawPhoto(ctx, photo, pCx, pCy, pR, pR, tf, "circle");
@@ -58,27 +58,38 @@ function tModernStack(ctx: CanvasRenderingContext2D, W: number, H: number, o: Re
 
   // Typography
   ctx.save(); ctx.textAlign = "center"; ctx.textBaseline = "top";
-  
+
   const nFsz = autoFit(ctx, name || "Your Name", cardW * 0.85, Math.round(W * 0.055), 24);
   ctx.font = `800 ${nFsz}px Inter,system-ui`; ctx.fillStyle = "#111827";
-  ctx.fillText(name || "Your Name", cX, H * 0.49);
-  
+  ctx.fillText(name || "Your Name", cX, H * 0.53);
+
   ctx.font = `600 ${Math.round(W * 0.024)}px Inter,system-ui`; ctx.fillStyle = primary;
-  ctx.fillText((role || "Department · Role").toUpperCase(), cX, H * 0.49 + nFsz + 12);
+  ctx.fillText((role || "Department · Role").toUpperCase(), cX, H * 0.53 + nFsz + 12);
 
   if (periodLabel) {
     ctx.font = `600 ${Math.round(W * 0.02)}px Inter,system-ui`;
     ctx.fillStyle = "rgba(17,24,39,0.35)";
-    ctx.fillText(periodLabel.toUpperCase(), cX, H * 0.49 + nFsz + 45);
+    ctx.fillText(periodLabel.toUpperCase(), cX, H * 0.53 + nFsz + 65);
   }
   ctx.restore();
 
+  if (awardType) {
+    ctx.save(); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    const { lines: aLines, sz: aFsz } = wrapAwardText(ctx, awardType.toUpperCase(), cardW * 0.85, Math.round(W * 0.04));
+    ctx.font = `900 ${aFsz}px Inter,system-ui`;
+    ctx.fillStyle = primary; // Explicitly blue
+    const aStartY = aLines.length === 1 ? H * 0.72 : H * 0.70;
+    aLines.forEach((line, i) => ctx.fillText(line, cX, aStartY + i * (aFsz + 4)));
+    ctx.restore();
+  }
+
   if (tagline) {
     ctx.save(); ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.font = `italic 400 ${Math.round(W * 0.024)}px Georgia,serif`;
-    ctx.fillStyle = "rgba(17,24,39,0.6)";
     const { lines: tLines, sz: tFsz } = wrapAwardText(ctx, tagline, cardW * 0.85, Math.round(W * 0.024));
-    tLines.forEach((line, i) => ctx.fillText(line, cX, H * 0.73 + i * (tFsz + 6)));
+    // Re-apply the non-bold font since wrapAwardText modifies it to 900
+    ctx.font = `italic 400 ${tFsz}px Inter,system-ui`;
+    ctx.fillStyle = "rgba(17,24,39,0.6)";
+    tLines.forEach((line, i) => ctx.fillText(line, cX, H * 0.80 + i * (tFsz + 6)));
     ctx.restore();
   }
 }
@@ -355,7 +366,7 @@ export default function TopPerformerCardMaker() {
             <span style={{ fontSize: 14 }}>{currentTemplate.emoji}</span>
             <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.5)", letterSpacing: "0.08em", textTransform: "uppercase" }}>{currentTemplate.name}</span>
           </div>
-          <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.6px", lineHeight: 1.15, background: "linear-gradient(135deg, #fff 30%, rgba(255,255,255,0.45))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+          <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.6px", lineHeight: 1.15, background: "linear-gradient(135deg, #030303ff 30%, rgba(255,255,255,0.45))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
             Top Performer Card Maker
           </h1>
           <p style={{ fontSize: 14, color: "rgba(255,255,255,0.3)", marginTop: 8, fontWeight: 400 }}>Design and download professional award cards in seconds</p>
