@@ -19,17 +19,18 @@ function tModernStack(ctx: CanvasRenderingContext2D, W: number, H: number, o: Re
   ctx.restore();
   const cX = W / 2, cardW = W * 0.76, cardH = H * 0.57;
   ctx.save(); ctx.shadowColor = "rgba(0,0,0,0.06)"; ctx.shadowBlur = 32; ctx.shadowOffsetY = 12;
-  rrect(ctx, cX - cardW / 2, H * 0.22, cardW, cardH, 28); ctx.fillStyle = "#ffffff"; ctx.fill(); ctx.restore();
-  const accentW = cardW - 48, accentH = H * 0.29;
+  rrect(ctx, cX - cardW / 2, H * 0.27, cardW, cardH, 28); ctx.fillStyle = "#ffffff"; ctx.fill(); ctx.restore();
+  const accentW = cardW - 48, accentH = H * 0.12;
   ctx.save(); ctx.shadowColor = primary + "28"; ctx.shadowBlur = 24; ctx.shadowOffsetY = 10;
-  rrect(ctx, cX - accentW / 2, H * 0.52, accentW, accentH, 20); ctx.fillStyle = primary; ctx.fill(); ctx.restore();
-  const pR = W * 0.125, pCx = cX, pCy = H * 0.23;
+  rrect(ctx, cX - accentW / 2, H * 0.64, accentW, accentH, 20); ctx.fillStyle = primary; ctx.fill(); ctx.restore();
+  const pR = W * 0.17, pCx = cX, pCy = H * 0.3;
   ctx.save(); ctx.shadowColor = "rgba(0,0,0,0.14)"; ctx.shadowBlur = 20; ctx.shadowOffsetY = 8;
   ctx.beginPath(); ctx.arc(pCx, pCy, pR + 6, 0, Math.PI * 2); ctx.fillStyle = "#ffffff"; ctx.fill(); ctx.restore();
   drawPhoto(ctx, photo, pCx, pCy, pR, pR, tf, "circle");
   if (logoImg) {
-    ctx.save(); const lw = Math.round(W * 0.13), lh = logoImg.naturalHeight * (lw / logoImg.naturalWidth);
-    ctx.drawImage(logoImg, cX - lw / 2, 190, lw, lh); ctx.restore();
+    ctx.save();
+    const lw = Math.round(W * 0.21), lh = logoImg.naturalHeight * (lw / logoImg.naturalWidth);
+    ctx.drawImage(logoImg, cX - lw / 2, 20, lw, lh); ctx.restore();
   } else if (orgName) {
     ctx.save(); ctx.textAlign = "center"; ctx.font = `800 ${Math.round(W * 0.024)}px Inter,system-ui`;
     ctx.fillStyle = "rgba(17,24,39,0.4)"; ctx.fillText(orgName.toUpperCase(), cX, 210); ctx.restore();
@@ -37,16 +38,17 @@ function tModernStack(ctx: CanvasRenderingContext2D, W: number, H: number, o: Re
   ctx.save(); ctx.textAlign = "center"; ctx.textBaseline = "top";
   const nFsz = autoFit(ctx, name || "Your Name", cardW * 0.78, Math.round(W * 0.045), 20);
   ctx.font = `700 ${nFsz}px Inter,system-ui`; ctx.fillStyle = "#111827";
-  ctx.fillText(name || "Your Name", cX, H * 0.395);
+  ctx.fillText(name || "Your Name", cX, H * 0.50);
   ctx.font = `400 ${Math.round(W * 0.022)}px Inter,system-ui`; ctx.fillStyle = "rgba(17,24,39,0.5)";
-  ctx.fillText(role || "Department · Role", cX, H * 0.395 + nFsz + 6); ctx.restore();
-  const { lines: aLines, sz: aFsz } = wrapAwardText(ctx, awardType.toUpperCase(), accentW * 0.88, Math.round(W * 0.052));
-  ctx.save(); ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.fillStyle = "#ffffff";
+  ctx.fillText(role || "Department · Role", cX, H * 0.50 + nFsz + 6); ctx.restore();
+  const { lines: aLines, sz: aFsz } = wrapAwardText(ctx, awardType.toUpperCase(), accentW * 0.88, Math.round(W * 0.045));
+  ctx.save(); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = "#ffffff";
   ctx.shadowColor = "rgba(0,0,0,0.18)"; ctx.shadowBlur = 6; ctx.font = `900 ${aFsz}px Inter,system-ui`;
-  const aStartY = aLines.length === 1 ? H * 0.60 : H * 0.565;
+  const aStartY = aLines.length === 1 ? H * 0.705 : H * 0.65;
   aLines.forEach((line, i) => ctx.fillText(line, cX, aStartY + i * (aFsz + 4))); ctx.restore();
   ctx.save(); ctx.textAlign = "center"; ctx.font = `600 italic ${Math.round(W * 0.024)}px Georgia,serif`;
-  ctx.fillStyle = "rgba(255,255,255,0.85)"; ctx.fillText(periodLabel || "", cX, H * 0.77); ctx.restore();
+  ctx.fillStyle = "rgba(255,255,255,0.85)";
+  ctx.fillText(periodLabel || "", cX, H * 0.87); ctx.restore();
   if (tagline) {
     ctx.save(); ctx.textAlign = "center"; ctx.font = `400 ${Math.round(W * 0.021)}px Inter,system-ui`;
     ctx.fillStyle = light ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.4)"; ctx.fillText(tagline, cX, H * 0.92); ctx.restore();
@@ -184,13 +186,15 @@ function tElegantClassic(ctx: CanvasRenderingContext2D, W: number, H: number, o:
   }
 }
 
+// ─── Template Registry ────────────────────────────────────────────────────────
+
 type TemplateId = "modern-stack" | "minimal-split" | "glow-frame" | "elegant-classic";
 
-const TEMPLATES: { id: TemplateId; name: string; icon: string }[] = [
-  { id: "modern-stack",    name: "Modern Stack",    icon: "🎴" },
-  { id: "minimal-split",  name: "Minimal Split",   icon: "🔲" },
-  { id: "glow-frame",     name: "Glow Frame",      icon: "✨" },
-  { id: "elegant-classic",name: "Elegant Classic", icon: "🏅" },
+const TEMPLATES: { id: TemplateId; name: string; desc: string; emoji: string }[] = [
+  { id: "modern-stack", name: "Modern Stack", desc: "Bold centered layout", emoji: "🎴" },
+  { id: "minimal-split", name: "Minimal Split", desc: "Clean left-band design", emoji: "⬛" },
+  { id: "glow-frame", name: "Glow Frame", desc: "Neon-lit dark card", emoji: "✨" },
+  { id: "elegant-classic", name: "Elegant Classic", desc: "Clean asymmetric style", emoji: "🏅" },
 ];
 
 function renderTemplate(id: TemplateId, canvas: HTMLCanvasElement, opts: RenderOpts) {
@@ -199,9 +203,9 @@ function renderTemplate(id: TemplateId, canvas: HTMLCanvasElement, opts: RenderO
   if (!ctx) return;
   ctx.imageSmoothingEnabled = true;
   (ctx as any).imageSmoothingQuality = "high";
-  if (id === "modern-stack")    tModernStack(ctx, 800, 800, opts);
-  if (id === "minimal-split")   tMinimalSplit(ctx, 800, 800, opts);
-  if (id === "glow-frame")      tGlowFrame(ctx, 800, 800, opts);
+  if (id === "modern-stack") tModernStack(ctx, 800, 800, opts);
+  if (id === "minimal-split") tMinimalSplit(ctx, 800, 800, opts);
+  if (id === "glow-frame") tGlowFrame(ctx, 800, 800, opts);
   if (id === "elegant-classic") tElegantClassic(ctx, 800, 800, opts);
 }
 
@@ -213,14 +217,14 @@ export default function TopPerformerCardMaker() {
   const [logoImg, setLogoImg] = useState<HTMLImageElement | null>(null);
   const [hasPhoto, setHasPhoto] = useState(false);
   const [imgVersion, setImgVersion] = useState(0);
-  const [tab, setTab] = useState<"template" | "info" | "style" | "photo">("template");
+  const [tab, setTab] = useState<"template" | "content" | "style">("template");
   const [templateId, setTemplateId] = useState<TemplateId>("modern-stack");
 
   const [awardType, setAwardType] = useState("Employee of the Month");
   const [periodType, setPeriodType] = useState<"week" | "month" | "year" | "custom">("month");
   const [periodLabel, setPeriodLabel] = useState(MONTHS[new Date().getMonth()]);
-  const [name, setName] = useState("Sanjeev Kumar");
-  const [role, setRole] = useState("Digital Marketing Trainer");
+  const [name, setName] = useState("John Doe");
+  const [role, setRole] = useState("Digital Marketing");
   const [tagline, setTagline] = useState("Thank you for your passion and impact!");
   const [orgName, setOrgName] = useState("TemplateStudio");
   const [tf, setTf] = useState<Transform>({ scale: 1, x: 0, y: 0, rotate: 0 });
@@ -232,7 +236,7 @@ export default function TopPerformerCardMaker() {
   const [txt, setTxt] = useState(COLOR_PRESETS[0].txt);
 
   useEffect(() => {
-    const img = new Image(); img.src = "/aibi_logo.png";
+    const img = new Image(); img.src = "/Aibi_Primary Logo_Gradient.png";
     img.onload = () => setLogoImg(img);
   }, []);
 
@@ -241,7 +245,7 @@ export default function TopPerformerCardMaker() {
   const draw = useCallback(() => {
     if (!canvasRef.current) return;
     renderTemplate(templateId, canvasRef.current, opts);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [templateId, logoImg, tf, name, role, awardType, periodLabel, tagline, orgName, primary, secondary, bg, txt, imgVersion]);
 
   useEffect(() => { draw(); }, [draw]);
@@ -264,265 +268,266 @@ export default function TopPerformerCardMaker() {
     setPreset(p); setPrimary(p.primary); setSecondary(p.secondary); setBg(p.bg); setTxt(p.txt);
   }
 
-  const card: React.CSSProperties = {
-    background: "rgba(255,255,255,0.025)", backdropFilter: "blur(20px)",
-    WebkitBackdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.08)",
-    borderRadius: 20, padding: 20,
-  };
+  const slug = (name || "performer").replace(/\s+/g, "-").toLowerCase();
+  const currentTemplate = TEMPLATES.find(t => t.id === templateId)!;
 
-  function TabBtn({ id, label }: { id: string; label: string }) {
-    const active = tab === id;
-    return (
-      <button onClick={() => setTab(id as any)} style={{
-        padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: "pointer",
-        background: active ? "#ffffff" : "rgba(255,255,255,0.04)",
-        color: active ? "#000" : "rgba(255,255,255,0.45)",
-        border: "1px solid " + (active ? "#ffffff" : "rgba(255,255,255,0.08)"),
-        transition: "all .15s", whiteSpace: "nowrap",
-      }}>{label}</button>
-    );
-  }
+  // ── Shared style tokens ──
+  const panel: React.CSSProperties = {
+    background: "rgba(255,255,255,0.03)",
+    border: "1px solid rgba(255,255,255,0.07)",
+    borderRadius: 16,
+  };
 
   function Pill({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
     return (
       <button onClick={onClick} style={{
-        padding: "5px 11px", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer",
-        background: active ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.04)",
-        color: active ? "#fff" : "rgba(255,255,255,0.5)",
-        border: "1px solid " + (active ? "rgba(255,255,255,0.38)" : "rgba(255,255,255,0.08)"),
+        padding: "4px 10px", borderRadius: 20, fontSize: 11, fontWeight: 500, cursor: "pointer",
+        background: active ? primary : "rgba(255,255,255,0.05)",
+        color: active ? "#fff" : "rgba(255,255,255,0.45)",
+        border: "1px solid " + (active ? primary : "rgba(255,255,255,0.07)"),
         transition: "all .14s",
       }}>{label}</button>
     );
   }
 
-  const currentTemplate = TEMPLATES.find(t => t.id === templateId)!;
-
   return (
-    <div style={{ background: "radial-gradient(ellipse at 50% 0%, #14142a 0%, #040406 65%)", minHeight: "100vh", color: "#fff", fontFamily: "Inter,system-ui,sans-serif" }}>
+    <div style={{ background: "linear-gradient(135deg, #0a0a14 0%, #0e0e1e 50%, #080810 100%)", minHeight: "100vh", color: "#fff", fontFamily: "'Inter',system-ui,sans-serif" }}>
       <style>{`
-        * { box-sizing: border-box; }
-        ::-webkit-scrollbar { width: 4px; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        ::-webkit-scrollbar { width: 3px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
-        input[type=range] { -webkit-appearance: none; appearance: none; height: 4px; background: rgba(255,255,255,0.15); border-radius: 2px; outline: none; cursor: pointer; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #fff; cursor: pointer; box-shadow: 0 0 8px rgba(255,255,255,0.4); }
-        input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #fff; border: none; cursor: pointer; }
-        select option { background: #1a1a2e; color: #fff; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+        input[type=range] { -webkit-appearance: none; appearance: none; height: 3px; background: rgba(255,255,255,0.1); border-radius: 2px; outline: none; cursor: pointer; width: 100%; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%; background: #fff; cursor: pointer; box-shadow: 0 0 6px rgba(255,255,255,0.35); }
+        input[type=range]::-moz-range-thumb { width: 13px; height: 13px; border-radius: 50%; background: #fff; border: none; cursor: pointer; }
+        select option { background: #12121e; color: #fff; }
+        .tab-btn { padding: 7px 0; flex: 1; border-radius: 10px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; border: none; font-family: inherit; }
+        .tab-btn.active { background: rgba(255,255,255,0.12); color: #fff; }
+        .tab-btn.inactive { background: transparent; color: rgba(255,255,255,0.35); }
+        .tab-btn:hover { color: rgba(255,255,255,0.8); }
+        .dl-btn { width: 100%; padding: 11px; border-radius: 12px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; font-family: inherit; transition: all .2s; display: flex; align-items: center; justify-content: center; gap: 7px; }
+        .dl-btn-secondary { padding: 10px; border-radius: 11px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid rgba(255,255,255,0.09); font-family: inherit; transition: all .2s; display: flex; align-items: center; justify-content: center; gap: 6px; background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.65); }
+        .dl-btn-secondary:hover { background: rgba(255,255,255,0.09); color: #fff; border-color: rgba(255,255,255,0.18); }
+        .tmpl-card { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: 12px; cursor: pointer; border: 1px solid transparent; transition: all .15s; font-family: inherit; text-align: left; width: 100%; }
+        .tmpl-card.active { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.18); }
+        .tmpl-card.inactive { background: transparent; color: rgba(255,255,255,0.5); }
+        .tmpl-card:hover { background: rgba(255,255,255,0.06); color: #fff; border-color: rgba(255,255,255,0.12); }
+        .field-inp { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 9px 12px; color: #fff; font-size: 13px; outline: none; font-family: inherit; transition: border-color .15s; }
+        .field-inp:focus { border-color: rgba(255,255,255,0.2); }
+        .upload-zone { display: flex; align-items: center; justify-content: center; gap: 10px; border-radius: 12px; padding: 18px; cursor: pointer; border: 1.5px dashed rgba(255,255,255,0.1); background: rgba(255,255,255,0.02); color: rgba(255,255,255,0.4); font-size: 13px; font-weight: 500; transition: all .2s; font-family: inherit; width: 100%; }
+        .upload-zone:hover { border-color: rgba(255,255,255,0.22); background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.7); }
       `}</style>
 
-      <div style={{ maxWidth: 1130, margin: "0 auto", padding: "28px 16px 48px" }}>
-        {/* Header */}
-        <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 100, padding: "5px 16px", marginBottom: 12 }}>
-            <span>{currentTemplate.icon}</span>
-            <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.6)", letterSpacing: "0.06em" }}>{currentTemplate.name}</span>
+      <div style={{ maxWidth: 1160, margin: "0 auto", padding: "32px 20px 60px" }}>
+
+        {/* ── Header ── */}
+        <div style={{ textAlign: "center", marginBottom: 36 }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 100, padding: "4px 14px 4px 10px", marginBottom: 14 }}>
+            <span style={{ fontSize: 14 }}>{currentTemplate.emoji}</span>
+            <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.5)", letterSpacing: "0.08em", textTransform: "uppercase" }}>{currentTemplate.name}</span>
           </div>
-          <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: "-0.5px", margin: 0, background: "linear-gradient(to right, #fff 30%, #a1a1aa)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-            Celebrate Your Star Performers
+          <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.6px", lineHeight: 1.15, background: "linear-gradient(135deg, #fff 30%, rgba(255,255,255,0.45))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+            Top Performer Card Maker
           </h1>
+          <p style={{ fontSize: 14, color: "rgba(255,255,255,0.3)", marginTop: 8, fontWeight: 400 }}>Design and download professional award cards in seconds</p>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 20, alignItems: "start" }}>
-          {/* Left Panel */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {/* Tab buttons */}
-            <div style={{ ...card, padding: "8px", display: "flex", gap: 5, flexWrap: "wrap" }}>
-              <TabBtn id="template" label="🎨 Template" />
-              <TabBtn id="info"     label="Info" />
-              <TabBtn id="style"    label="Style" />
-              <TabBtn id="photo"    label="Photo" />
+        <div style={{ display: "grid", gridTemplateColumns: "290px 1fr", gap: 16, alignItems: "start" }}>
+
+          {/* ── Left Sidebar ── */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+
+            {/* Tab Nav */}
+            <div style={{ ...panel, padding: 6, display: "flex", gap: 4 }}>
+              {(["template", "content", "style"] as const).map(t => (
+                <button key={t} className={`tab-btn ${tab === t ? "active" : "inactive"}`} onClick={() => setTab(t)}>
+                  {t === "template" ? "Template" : t === "content" ? "Content" : "Style"}
+                </button>
+              ))}
             </div>
 
-            <div style={card}>
-              {/* ── Template Picker ── */}
+            {/* Tab Body */}
+            <div style={{ ...panel, padding: 16 }}>
+
+              {/* ── Template Tab ── */}
               {tab === "template" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  <p style={{ fontSize: 10, letterSpacing: "0.18em", fontWeight: 600, color: "rgba(255,255,255,0.28)", textTransform: "uppercase", margin: "0 0 4px" }}>Choose Template</p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <p style={{ fontSize: 10, letterSpacing: "0.15em", fontWeight: 700, color: "rgba(255,255,255,0.2)", textTransform: "uppercase", marginBottom: 8 }}>Choose a Layout</p>
                   {TEMPLATES.map(t => (
-                    <button key={t.id} onClick={() => setTemplateId(t.id)} style={{
-                      display: "flex", alignItems: "center", gap: 10,
-                      padding: "10px 14px", borderRadius: 12, cursor: "pointer",
-                      background: templateId === t.id ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.04)",
-                      border: "1px solid " + (templateId === t.id ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.07)"),
-                      color: templateId === t.id ? "#fff" : "rgba(255,255,255,0.55)",
-                      fontFamily: "inherit", fontSize: 13, fontWeight: 600, textAlign: "left",
-                      transition: "all .15s",
-                      boxShadow: templateId === t.id ? "0 0 16px rgba(255,255,255,0.06)" : "none",
-                    }}>
-                      <span style={{ fontSize: 20 }}>{t.icon}</span>
-                      <span>{t.name}</span>
-                      {templateId === t.id && <span style={{ marginLeft: "auto", fontSize: 10, background: "rgba(255,255,255,0.15)", borderRadius: 6, padding: "2px 7px", color: "rgba(255,255,255,0.7)" }}>Active</span>}
+                    <button key={t.id} className={`tmpl-card ${templateId === t.id ? "active" : "inactive"}`} onClick={() => setTemplateId(t.id)}>
+                      <span style={{ fontSize: 22, lineHeight: 1 }}>{t.emoji}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: templateId === t.id ? "#fff" : "rgba(255,255,255,0.6)" }}>{t.name}</div>
+                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.28)", marginTop: 2 }}>{t.desc}</div>
+                      </div>
+                      {templateId === t.id && (
+                        <span style={{ fontSize: 10, background: primary + "33", color: primary, borderRadius: 6, padding: "2px 8px", fontWeight: 700, border: `1px solid ${primary}44`, whiteSpace: "nowrap" }}>Active</span>
+                      )}
                     </button>
                   ))}
-                  <p style={{ fontSize: 11, color: "rgba(255,255,255,0.22)", margin: "6px 0 0" }}>
-                    Switch templates anytime — your edits are preserved.
+                  <p style={{ fontSize: 11, color: "rgba(255,255,255,0.18)", marginTop: 8, lineHeight: 1.5 }}>
+                    Your edits are preserved when switching.
                   </p>
                 </div>
               )}
 
-              {/* ── Info ── */}
-              {tab === "info" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-                  <Sec label="Award">
-                    <Lbl text="Award Type">
-                      <select value={awardType} onChange={e => setAwardType(e.target.value)} style={{
-                        background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)",
-                        borderRadius: 10, padding: "8px 11px", color: "#fff", fontSize: 13, outline: "none",
-                        fontFamily: "inherit", cursor: "pointer",
-                      }}>
+              {/* ── Content Tab ── */}
+              {tab === "content" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+                  {/* Photo Upload */}
+                  <div>
+                    <p style={{ fontSize: 10, letterSpacing: "0.15em", fontWeight: 700, color: "rgba(255,255,255,0.2)", textTransform: "uppercase", marginBottom: 10 }}>Photo</p>
+                    <label className="upload-zone" style={{ cursor: "pointer" }}>
+                      <span style={{ fontSize: 18 }}>↑</span>
+                      <span>{hasPhoto ? "Replace photo" : "Upload photo"}</span>
+                      <input type="file" accept="image/*" style={{ display: "none" }} onChange={upload} />
+                    </label>
+                  </div>
+
+                  {hasPhoto && (
+                    <div>
+                      <p style={{ fontSize: 10, letterSpacing: "0.15em", fontWeight: 700, color: "rgba(255,255,255,0.2)", textTransform: "uppercase", marginBottom: 10 }}>Adjust Image</p>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                        <SlRow label="Zoom" min={0.5} max={3} step={0.01} value={tf.scale} onChange={v => setTf(p => ({ ...p, scale: v }))} />
+                        <SlRow label="Pan X" min={-250} max={250} step={1} value={tf.x} onChange={v => setTf(p => ({ ...p, x: v }))} />
+                        <SlRow label="Pan Y" min={-250} max={250} step={1} value={tf.y} onChange={v => setTf(p => ({ ...p, y: v }))} />
+                        <SlRow label="Rotate" min={-180} max={180} step={1} value={tf.rotate} onChange={v => setTf(p => ({ ...p, rotate: v }))} />
+                        <button onClick={() => setTf({ scale: 1, x: 0, y: 0, rotate: 0 })}
+                          style={{ color: "rgba(255,255,255,0.25)", background: "none", border: "none", cursor: "pointer", fontSize: 11, textAlign: "left", padding: 0, fontFamily: "inherit" }}>
+                          ↺ Reset
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Text Fields */}
+                  <div>
+                    <p style={{ fontSize: 10, letterSpacing: "0.15em", fontWeight: 700, color: "rgba(255,255,255,0.2)", textTransform: "uppercase", marginBottom: 10 }}>Award</p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      <select value={awardType} onChange={e => setAwardType(e.target.value)} className="field-inp" style={{ cursor: "pointer" }}>
                         {AWARD_TYPES.map(a => <option key={a} value={a}>{a}</option>)}
                       </select>
-                    </Lbl>
-                    <Lbl text="Period">
-                      <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                         {(["week", "month", "year", "custom"] as const).map(p => (
-                          <Pill key={p} active={periodType === p} onClick={() => setPeriodType(p)} label={p.charAt(0).toUpperCase() + p.slice(1)} />
+                          <Pill key={p} active={periodType === p} onClick={() => setPeriodType(p)} label={p[0].toUpperCase() + p.slice(1)} />
                         ))}
                       </div>
-                    </Lbl>
-                    {periodType === "month" && (
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
-                        {MONTHS.map(m => <Pill key={m} active={periodLabel === m} onClick={() => setPeriodLabel(m)} label={m} />)}
-                      </div>
-                    )}
-                    {periodType === "week" && (
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                        {WEEKS.map(w => <Pill key={w} active={periodLabel === w} onClick={() => setPeriodLabel(w)} label={w} />)}
-                      </div>
-                    )}
-                    {periodType === "year" && (
-                      <div style={{ display: "flex", gap: 5 }}>
-                        {["2024", "2025", "2026"].map(y => <Pill key={y} active={periodLabel === y} onClick={() => setPeriodLabel(y)} label={y} />)}
-                      </div>
-                    )}
-                    {periodType === "custom" && (
-                      <Inp value={periodLabel} onChange={e => setPeriodLabel(e.target.value)} placeholder="e.g. Q1 2025" />
-                    )}
-                  </Sec>
-                  <Sep />
-                  <Sec label="Person">
-                    <Lbl text="Full Name"><Inp value={name} onChange={e => setName(e.target.value)} placeholder="Full Name" /></Lbl>
-                    <Lbl text="Role / Department"><Inp value={role} onChange={e => setRole(e.target.value)} placeholder="Role / Department" /></Lbl>
-                    <Lbl text="Tagline"><Inp value={tagline} onChange={e => setTagline(e.target.value)} placeholder="Thank you for your passion..." /></Lbl>
-                    <Lbl text="Organisation Name"><Inp value={orgName} onChange={e => setOrgName(e.target.value)} placeholder="Org Name" /></Lbl>
-                  </Sec>
+                      {periodType === "month" && (
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 4 }}>
+                          {MONTHS.map(m => <Pill key={m} active={periodLabel === m} onClick={() => setPeriodLabel(m)} label={m.slice(0, 3)} />)}
+                        </div>
+                      )}
+                      {periodType === "week" && (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                          {WEEKS.map(w => <Pill key={w} active={periodLabel === w} onClick={() => setPeriodLabel(w)} label={w} />)}
+                        </div>
+                      )}
+                      {periodType === "year" && (
+                        <div style={{ display: "flex", gap: 4 }}>
+                          {["2024", "2025", "2026"].map(y => <Pill key={y} active={periodLabel === y} onClick={() => setPeriodLabel(y)} label={y} />)}
+                        </div>
+                      )}
+                      {periodType === "custom" && (
+                        <input className="field-inp" value={periodLabel} onChange={e => setPeriodLabel(e.target.value)} placeholder="e.g. Q1 2025" />
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <p style={{ fontSize: 10, letterSpacing: "0.15em", fontWeight: 700, color: "rgba(255,255,255,0.2)", textTransform: "uppercase", marginBottom: 10 }}>Person</p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                      {[
+                        { label: "Full Name", val: name, set: setName },
+                        { label: "Role / Department", val: role, set: setRole },
+                        { label: "Tagline", val: tagline, set: setTagline },
+                        { label: "Organisation", val: orgName, set: setOrgName },
+                      ].map(({ label, val, set }) => (
+                        <div key={label}>
+                          <label style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", display: "block", marginBottom: 4, fontWeight: 600 }}>{label}</label>
+                          <input className="field-inp" value={val} onChange={e => set(e.target.value)} placeholder={label} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
 
-              {/* ── Style ── */}
+              {/* ── Style Tab ── */}
               {tab === "style" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-                  <Sec label="Color Presets">
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 7 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                  <div>
+                    <p style={{ fontSize: 10, letterSpacing: "0.15em", fontWeight: 700, color: "rgba(255,255,255,0.2)", textTransform: "uppercase", marginBottom: 10 }}>Color Theme</p>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
                       {COLOR_PRESETS.map((p, i) => (
                         <button key={i} title={p.name} onClick={() => applyPreset(p)} style={{
                           aspectRatio: "1", borderRadius: 10, cursor: "pointer",
                           background: `linear-gradient(135deg, ${p.bg}, ${p.primary})`,
-                          border: preset === p ? "2.5px solid rgba(255,255,255,0.9)" : "2px solid rgba(255,255,255,0.08)",
-                          boxShadow: preset === p ? `0 0 14px ${p.primary}77` : "none",
-                          transform: preset === p ? "scale(1.08)" : "scale(1)",
-                          transition: "all .15s",
+                          border: preset === p ? `2px solid ${p.primary}` : "2px solid rgba(255,255,255,0.06)",
+                          boxShadow: preset === p ? `0 0 12px ${p.primary}55` : "none",
+                          transform: preset === p ? "scale(1.1)" : "scale(1)",
+                          transition: "all .15s", outline: "none",
                         }} />
                       ))}
                     </div>
-                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", margin: "4px 0 0" }}>Active: {preset.name}</p>
-                  </Sec>
-                  <Sep />
-                  <Sec label="Custom Colors">
-                    {[
-                      { lbl: "Primary colour", val: primary, set: setPrimary },
-                      { lbl: "Secondary / gradient", val: secondary, set: setSecondary },
-                      { lbl: "Background", val: bg, set: setBg },
-                    ].map(({ lbl, val, set }) => (
-                      <div key={lbl} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                        <span style={{ fontSize: 12, color: "rgba(255,255,255,0.45)" }}>{lbl}</span>
-                        <input type="color" value={val} onChange={e => set(e.target.value)}
-                          style={{ width: 32, height: 24, borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.06)", padding: 2, cursor: "pointer" }} />
-                      </div>
-                    ))}
-                  </Sec>
-                </div>
-              )}
+                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.22)", marginTop: 8 }}>Active: {preset.name}</p>
+                  </div>
 
-              {/* ── Photo ── */}
-              {tab === "photo" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-                  <Sec label="Upload Photo">
-                    <label style={{
-                      display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                      borderRadius: 12, padding: "16px 0", cursor: "pointer",
-                      border: "1.5px dashed rgba(255,255,255,0.14)", background: "rgba(255,255,255,0.03)",
-                      color: "rgba(255,255,255,0.5)", fontSize: 13, transition: "all .2s",
-                    }}>
-                      <span style={{ fontSize: 20 }}>↑</span>
-                      <span>{hasPhoto ? "Replace photo" : "Upload photo"}</span>
-                      <input type="file" accept="image/*" style={{ display: "none" }} onChange={upload} />
-                    </label>
-                    {!hasPhoto && <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", margin: 0, textAlign: "center" }}>PNG or JPG works best.</p>}
-                  </Sec>
-                  {hasPhoto && (
-                    <>
-                      <Sep />
-                      <Sec label="Adjust Image">
-                        <SlRow label="Zoom"   min={0.5} max={3}    step={0.01} value={tf.scale}  onChange={v => setTf(p => ({ ...p, scale: v }))} />
-                        <SlRow label="Pan X"  min={-250} max={250} step={1}    value={tf.x}      onChange={v => setTf(p => ({ ...p, x: v }))} />
-                        <SlRow label="Pan Y"  min={-250} max={250} step={1}    value={tf.y}      onChange={v => setTf(p => ({ ...p, y: v }))} />
-                        <SlRow label="Rotate" min={-180} max={180} step={1}    value={tf.rotate} onChange={v => setTf(p => ({ ...p, rotate: v }))} />
-                        <button onClick={() => setTf({ scale: 1, x: 0, y: 0, rotate: 0 })}
-                          style={{ color: "rgba(255,255,255,0.28)", background: "none", border: "none", cursor: "pointer", fontSize: 11, textAlign: "left", padding: 0, marginTop: 2 }}>
-                          ↺ Reset adjustments
-                        </button>
-                      </Sec>
-                    </>
-                  )}
+                  <div>
+                    <p style={{ fontSize: 10, letterSpacing: "0.15em", fontWeight: 700, color: "rgba(255,255,255,0.2)", textTransform: "uppercase", marginBottom: 10 }}>Custom Colors</p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {[
+                        { label: "Primary", val: primary, set: setPrimary },
+                        { label: "Secondary", val: secondary, set: setSecondary },
+                        { label: "Background", val: bg, set: setBg },
+                      ].map(({ label, val, set }) => (
+                        <div key={label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 10px", background: "rgba(255,255,255,0.03)", borderRadius: 10, border: "1px solid rgba(255,255,255,0.06)" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <div style={{ width: 10, height: 10, borderRadius: "50%", background: val }} />
+                            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>{label}</span>
+                          </div>
+                          <input type="color" value={val} onChange={e => set(e.target.value)}
+                            style={{ width: 28, height: 22, borderRadius: 6, border: "none", background: "none", cursor: "pointer", padding: 0 }} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Right Panel — Canvas + Downloads */}
+          {/* ── Right Panel ── */}
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div style={{ ...card, display: "flex", alignItems: "center", justifyContent: "center", minHeight: 400, padding: 28 }}>
-              <div style={{ borderRadius: 16, overflow: "hidden", boxShadow: "0 28px 80px rgba(0,0,0,0.72), 0 0 0 1px rgba(255,255,255,0.05)" }}>
-                <canvas ref={canvasRef} style={{ display: "block", maxWidth: "100%", maxHeight: 580, width: "auto", height: "auto" }} />
+
+            {/* Canvas */}
+            <div style={{ ...panel, display: "flex", alignItems: "center", justifyContent: "center", padding: 32, minHeight: 420 }}>
+              <div style={{ borderRadius: 14, overflow: "hidden", boxShadow: "0 24px 72px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.04)" }}>
+                <canvas ref={canvasRef} style={{ display: "block", maxWidth: "100%", maxHeight: 560, width: "auto", height: "auto" }} />
               </div>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10 }}>
-              <p style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.28)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "4px 0 2px" }}>Download Formats</p>
+            {/* Downloads */}
+            <div style={{ ...panel, padding: 16 }}>
+              <p style={{ fontSize: 10, letterSpacing: "0.15em", fontWeight: 700, color: "rgba(255,255,255,0.2)", textTransform: "uppercase", marginBottom: 12 }}>Export</p>
 
-              <button onClick={() => dl(`${(name || "performer").replace(/\s+/g, "-").toLowerCase()}-award.png`, c => renderTemplate(templateId, c, opts))} style={{
-                width: "100%", padding: "12px 0", borderRadius: 12, fontSize: 13, fontWeight: 600, cursor: "pointer",
+              <button className="dl-btn" onClick={() => dl(`${slug}-award.png`, c => renderTemplate(templateId, c, opts))} style={{
                 background: `linear-gradient(135deg, ${primary}, ${secondary || primary})`, color: "#fff",
-                border: "none", transition: "all .2s", boxShadow: `0 4px 12px ${primary}33`,
+                boxShadow: `0 4px 14px ${primary}44`, marginBottom: 8,
               }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.filter = "brightness(1.1)"; }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.filter = "brightness(1.12)"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.filter = "none"; }}
               >
-                🎴 Download Square Award Card (PNG)
+                <span>↓</span> Square Award Card (800×800)
               </button>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                <button onClick={() => dl(`${(name || "performer").replace(/\s+/g, "-").toLowerCase()}-avatar.png`, c => renderProfilePic(c, opts))} style={{
-                  padding: "11px 0", borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: "pointer",
-                  background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.8)",
-                  border: "1px solid rgba(255,255,255,0.1)", transition: "all .2s",
-                }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.12)"; (e.currentTarget as HTMLButtonElement).style.color = "#fff"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)"; (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.8)"; }}
-                >
-                  👤 Profile Avatar
+                <button className="dl-btn-secondary" onClick={() => dl(`${slug}-avatar.png`, c => renderProfilePic(c, opts))}>
+                  <span>👤</span> Profile Avatar
                 </button>
-
-                <button onClick={() => dl(`${(name || "performer").replace(/\s+/g, "-").toLowerCase()}-banner.png`, c => renderLandscapeCard(c, opts))} style={{
-                  padding: "11px 0", borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: "pointer",
-                  background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.8)",
-                  border: "1px solid rgba(255,255,255,0.1)", transition: "all .2s",
-                }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.12)"; (e.currentTarget as HTMLButtonElement).style.color = "#fff"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)"; (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.8)"; }}
-                >
-                  🖥️ Landscape Banner
+                <button className="dl-btn-secondary" onClick={() => dl(`${slug}-banner.png`, c => renderLandscapeCard(c, opts))}>
+                  <span>🖥</span> Landscape Banner
                 </button>
               </div>
             </div>
