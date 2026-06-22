@@ -12,84 +12,172 @@ function tModernStack(ctx: CanvasRenderingContext2D, W: number, H: number, o: Re
   const { photo, logoImg, tf, name, role, awardType, periodLabel, tagline, orgName, primary, secondary, bg, txt } = o;
   const light = txt !== "#ffffff";
 
-  // Dynamic Background: Soft gradient
-  const grad = ctx.createLinearGradient(0, 0, W, H);
-  grad.addColorStop(0, bg);
-  grad.addColorStop(1, shade(bg, -15));
-  ctx.fillStyle = grad;
+  // 1. Vibrant Mesh-like Background
+  ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
-  // Subtle modern grid pattern
-  ctx.save(); ctx.strokeStyle = primary + "0d"; ctx.lineWidth = 1;
-  for (let x = 40; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
-  for (let y = 40; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+  const grad1 = ctx.createRadialGradient(0, 0, 0, 0, 0, W * 0.8);
+  grad1.addColorStop(0, primary + "33"); // 20% opacity
+  grad1.addColorStop(1, primary + "00");
+  ctx.fillStyle = grad1;
+  ctx.fillRect(0, 0, W, H);
+
+  const grad2 = ctx.createRadialGradient(W, H, 0, W, H, W * 0.8);
+  grad2.addColorStop(0, (secondary || primary) + "33");
+  grad2.addColorStop(1, (secondary || primary) + "00");
+  ctx.fillStyle = grad2;
+  ctx.fillRect(0, 0, W, H);
+
+  // Subtle dot pattern
+  ctx.save(); ctx.fillStyle = primary + "12";
+  for (let x = 20; x < W; x += 30) {
+    for (let y = 20; y < H; y += 30) {
+      ctx.beginPath(); ctx.arc(x, y, 1.2, 0, Math.PI * 2); ctx.fill();
+    }
+  }
   ctx.restore();
 
-  const cX = W / 2, cardW = W * 0.8, cardH = H * 0.65;
+  const cX = W / 2;
 
-  // Main Card
-  ctx.save();
-  ctx.shadowColor = "rgba(0,0,0,0.08)"; ctx.shadowBlur = 40; ctx.shadowOffsetY = 20;
-  rrect(ctx, cX - cardW / 2, H * 0.2, cardW, cardH, 32);
-  ctx.fillStyle = "#ffffff"; ctx.fill();
-  ctx.restore();
-
-  // Subtle top accent line
-  ctx.save();
-  rrect(ctx, cX - cardW / 2, H * 0.24, cardW, 8, 32);
-  ctx.fillStyle = primary; ctx.fill();
-  ctx.restore();
-
-  // Profile Picture
-  const pR = W * 0.18, pCx = cX, pCy = H * 0.30;
-  ctx.save(); ctx.shadowColor = "rgba(0,0,0,0.12)"; ctx.shadowBlur = 24; ctx.shadowOffsetY = 12;
-  ctx.beginPath(); ctx.arc(pCx, pCy, pR + 8, 0, Math.PI * 2); ctx.fillStyle = "#ffffff"; ctx.fill(); ctx.restore();
-  drawPhoto(ctx, photo, pCx, pCy, pR, pR, tf, "circle");
-
-  // Logo / Org
+  // 2. Logo at the top
   if (logoImg) {
     ctx.save();
-    const lw = Math.round(W * 0.22), lh = logoImg.naturalHeight * (lw / logoImg.naturalWidth);
-    ctx.drawImage(logoImg, cX - lw / 2, 30, lw, lh); ctx.restore();
+    const lw = Math.round(W * 0.28);
+    const lh = logoImg.naturalHeight * (lw / logoImg.naturalWidth);
+    ctx.drawImage(logoImg, cX - lw / 2, H * 0.05, lw, lh);
+    ctx.restore();
   } else if (orgName) {
-    ctx.save(); ctx.textAlign = "center"; ctx.font = `800 ${Math.round(W * 0.026)}px Inter,system-ui`;
-    ctx.fillStyle = "rgba(17,24,39,0.4)"; ctx.fillText(orgName.toUpperCase(), cX, 50); ctx.restore();
-  }
-
-  // Typography
-  ctx.save(); ctx.textAlign = "center"; ctx.textBaseline = "top";
-
-  const nFsz = autoFit(ctx, name || "Your Name", cardW * 0.85, Math.round(W * 0.055), 24);
-  ctx.font = `800 ${nFsz}px Inter,system-ui`; ctx.fillStyle = "#111827";
-  ctx.fillText(name || "Your Name", cX, H * 0.53);
-
-  ctx.font = `600 ${Math.round(W * 0.024)}px Inter,system-ui`; ctx.fillStyle = primary;
-  ctx.fillText((role || "Department · Role").toUpperCase(), cX, H * 0.53 + nFsz + 12);
-
-  if (periodLabel) {
-    ctx.font = `600 ${Math.round(W * 0.02)}px Inter,system-ui`;
-    ctx.fillStyle = "rgba(17,24,39,0.35)";
-    ctx.fillText(periodLabel.toUpperCase(), cX, H * 0.53 + nFsz + 65);
-  }
-  ctx.restore();
-
-  if (awardType) {
-    ctx.save(); ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    const { lines: aLines, sz: aFsz } = wrapAwardText(ctx, awardType.toUpperCase(), cardW * 0.85, Math.round(W * 0.04));
-    ctx.font = `900 ${aFsz}px Inter,system-ui`;
-    ctx.fillStyle = primary; // Explicitly blue
-    const aStartY = aLines.length === 1 ? H * 0.72 : H * 0.70;
-    aLines.forEach((line, i) => ctx.fillText(line, cX, aStartY + i * (aFsz + 4)));
+    ctx.save(); ctx.textAlign = "center"; ctx.textBaseline = "top";
+    ctx.font = `800 ${Math.round(W * 0.028)}px Inter,system-ui`;
+    ctx.fillStyle = primary;
+    ctx.fillText(orgName.toUpperCase(), cX, H * 0.06);
     ctx.restore();
   }
 
+  // 3. Main Card
+  const cardW = W * 0.82;
+  const cardH = H * 0.68;
+  const cardY = H * 0.25;
+
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,0.12)";
+  ctx.shadowBlur = 60;
+  ctx.shadowOffsetY = 25;
+  rrect(ctx, cX - cardW / 2, cardY, cardW, cardH, 32);
+  ctx.fillStyle = "#ffffff";
+  ctx.fill();
+  ctx.restore();
+
+  // Decorative header line on card
+  ctx.save();
+  rrect(ctx, cX - cardW / 2, cardY, cardW, 10, 32);
+  ctx.fillStyle = primary;
+  ctx.fill();
+  ctx.restore();
+
+  // 4. Profile Picture (overlapping top edge)
+  const pR = W * 0.16;
+  const pCy = cardY; 
+  ctx.save();
+  // Outer glowing ring
+  ctx.beginPath(); ctx.arc(cX, pCy, pR + 12, 0, Math.PI * 2);
+  ctx.fillStyle = "#ffffff";
+  ctx.shadowColor = primary + "55";
+  ctx.shadowBlur = 30;
+  ctx.shadowOffsetY = 10;
+  ctx.fill();
+  ctx.restore();
+
+  // Inner border
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cX, pCy, pR + 5, 0, Math.PI * 2);
+  const pGrad = ctx.createLinearGradient(cX - pR, pCy - pR, cX + pR, pCy + pR);
+  pGrad.addColorStop(0, primary);
+  pGrad.addColorStop(1, secondary || shade(primary, -20));
+  ctx.fillStyle = pGrad;
+  ctx.fill();
+  ctx.restore();
+
+  drawPhoto(ctx, photo, cX, pCy, pR, pR, tf, "circle");
+
+  // 5. Typography Content
+  ctx.save(); ctx.textAlign = "center"; ctx.textBaseline = "top";
+
+  const nameY = cardY + pR + 32;
+  const nFsz = autoFit(ctx, name || "Your Name", cardW * 0.8, Math.round(W * 0.065), 28);
+  ctx.font = `800 ${nFsz}px Inter,system-ui`;
+  ctx.fillStyle = "#0f172a";
+  ctx.fillText(name || "Your Name", cX, nameY);
+
+  const roleY = nameY + nFsz + 10;
+  ctx.font = `700 ${Math.round(W * 0.022)}px Inter,system-ui`;
+  ctx.fillStyle = primary;
+  // Wide tracking simulation
+  const roleText = (role || "Department · Role").toUpperCase().split('').join(String.fromCharCode(8202));
+  ctx.fillText(roleText, cX, roleY);
+
+  // Elegant Divider
+  const divY = roleY + 45;
+  ctx.beginPath();
+  ctx.moveTo(cX - 30, divY);
+  ctx.lineTo(cX + 30, divY);
+  ctx.strokeStyle = primary + "33";
+  ctx.lineWidth = 4;
+  ctx.lineCap = "round";
+  ctx.stroke();
+
+  // Award Type
+  if (awardType) {
+    const awardY = divY + 35;
+    ctx.textBaseline = "middle";
+    const { lines: aLines, sz: aFsz } = wrapAwardText(ctx, awardType.toUpperCase(), cardW * 0.85, Math.round(W * 0.052));
+    ctx.font = `900 ${aFsz}px Inter,system-ui`;
+    
+    // Gradient text for award
+    const textGrad = ctx.createLinearGradient(cX - cardW/3, 0, cX + cardW/3, 0);
+    textGrad.addColorStop(0, primary);
+    textGrad.addColorStop(1, secondary || shade(primary, -30));
+    ctx.fillStyle = textGrad;
+
+    const totalHAward = aLines.length * (aFsz + 8);
+    const startY = awardY + (aFsz / 2);
+    aLines.forEach((line, i) => {
+      ctx.fillText(line, cX, startY + i * (aFsz + 8));
+    });
+
+    // Period Label Pill
+    if (periodLabel) {
+      ctx.textBaseline = "middle";
+      const pY = startY + totalHAward + 20;
+      ctx.font = `800 ${Math.round(W * 0.02)}px Inter,system-ui`;
+      const pW = ctx.measureText(periodLabel.toUpperCase()).width + 44;
+      const pH = Math.round(W * 0.045);
+      
+      ctx.beginPath();
+      rrect(ctx, cX - pW / 2, pY - pH / 2, pW, pH, pH / 2);
+      ctx.fillStyle = primary + "15";
+      ctx.fill();
+      
+      ctx.fillStyle = primary;
+      ctx.fillText(periodLabel.toUpperCase(), cX, pY);
+    }
+  }
+
+  ctx.restore();
+
+  // Tagline
   if (tagline) {
-    ctx.save(); ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    const { lines: tLines, sz: tFsz } = wrapAwardText(ctx, tagline, cardW * 0.85, Math.round(W * 0.024));
-    // Re-apply the non-bold font since wrapAwardText modifies it to 900
-    ctx.font = `italic 400 ${tFsz}px Inter,system-ui`;
-    ctx.fillStyle = "rgba(17,24,39,0.6)";
-    tLines.forEach((line, i) => ctx.fillText(line, cX, H * 0.80 + i * (tFsz + 6)));
+    ctx.save(); ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+    const tY = cardY + cardH - 35;
+    const { lines: tLines, sz: tFsz } = wrapAwardText(ctx, tagline, cardW * 0.8, Math.round(W * 0.024));
+    ctx.font = `italic 400 ${tFsz}px Georgia,serif`;
+    ctx.fillStyle = "#64748b"; // Slate 500
+    
+    // Draw from bottom up
+    const lineHeight = tFsz + 8;
+    tLines.reverse().forEach((line, i) => {
+      ctx.fillText(line, cX, tY - i * lineHeight);
+    });
     ctx.restore();
   }
 }
@@ -103,37 +191,54 @@ function tMinimalSplit(ctx: CanvasRenderingContext2D, W: number, H: number, o: R
     ctx.beginPath(); ctx.arc(x, y, 1.4, 0, Math.PI * 2); ctx.fill();
   }
   ctx.restore();
+  
+  const cardW = W * 0.75, cardH = H * 0.68;
+  const cX = W * 0.125, cY = H * 0.16;
+  const rad = Math.min(W, H) * 0.03;
+  
   ctx.save(); ctx.shadowColor = "rgba(0,0,0,0.06)"; ctx.shadowBlur = 32; ctx.shadowOffsetY = 12;
-  rrect(ctx, 100, 140, 600, 540, 24); ctx.fillStyle = "#ffffff"; ctx.fill(); ctx.restore();
-  ctx.save(); rrect(ctx, 100, 140, 600, 540, 24); ctx.clip();
-  const grad = ctx.createLinearGradient(100, 140, 320, 680);
+  rrect(ctx, cX, cY, cardW, cardH, rad); ctx.fillStyle = "#ffffff"; ctx.fill(); ctx.restore();
+  ctx.save(); rrect(ctx, cX, cY, cardW, cardH, rad); ctx.clip();
+  
+  const splitW = cardW * 0.36;
+  const grad = ctx.createLinearGradient(cX, cY, cX + splitW, cY + cardH);
   grad.addColorStop(0, primary); grad.addColorStop(1, secondary || shade(primary, -40));
-  ctx.fillStyle = grad; ctx.fillRect(100, 140, 220, 540); ctx.restore();
+  ctx.fillStyle = grad; ctx.fillRect(cX, cY, splitW, cardH); ctx.restore();
+  
+  const leftCenter = cX + splitW / 2;
   if (logoImg) {
     ctx.save(); const lw = Math.round(W * 0.11), lh = logoImg.naturalHeight * (lw / logoImg.naturalWidth);
-    ctx.drawImage(logoImg, 210 - lw / 2, 180, lw, lh); ctx.restore();
+    ctx.drawImage(logoImg, leftCenter - lw / 2, cY + cardH * 0.08, lw, lh); ctx.restore();
   } else if (orgName) {
     ctx.save(); ctx.textAlign = "center"; ctx.font = `800 ${Math.round(W * 0.022)}px Inter,system-ui`;
-    ctx.fillStyle = "rgba(255,255,255,0.6)"; ctx.fillText(orgName.toUpperCase(), 210, 200); ctx.restore();
+    ctx.fillStyle = "rgba(255,255,255,0.6)"; ctx.fillText(orgName.toUpperCase(), leftCenter, cY + cardH * 0.12); ctx.restore();
   }
+  
+  const pR = Math.min(W, H) * 0.1;
+  const pCy = cY + cardH * 0.35;
   ctx.save(); ctx.shadowColor = "rgba(0,0,0,0.14)"; ctx.shadowBlur = 16;
-  ctx.beginPath(); ctx.arc(210, 330, 80, 0, Math.PI * 2); ctx.fillStyle = "#ffffff"; ctx.fill(); ctx.restore();
-  drawPhoto(ctx, photo, 210, 330, 75, 75, tf, "circle");
+  ctx.beginPath(); ctx.arc(leftCenter, pCy, pR + 5, 0, Math.PI * 2); ctx.fillStyle = "#ffffff"; ctx.fill(); ctx.restore();
+  drawPhoto(ctx, photo, leftCenter, pCy, pR, pR, tf, "circle");
+  
   if (periodLabel) {
     ctx.save(); ctx.textAlign = "center"; ctx.font = `600 italic ${Math.round(W * 0.022)}px Georgia,serif`;
-    ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.fillText(periodLabel, 210, 460); ctx.restore();
+    ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.fillText(periodLabel, leftCenter, pCy + pR + 30); ctx.restore();
   }
+  
+  const rightStart = cX + splitW + W * 0.04;
   ctx.save(); ctx.textAlign = "left"; ctx.textBaseline = "top"; ctx.fillStyle = primary;
-  const { lines: aLines, sz: aFsz } = wrapAwardText(ctx, awardType.toUpperCase(), 330, Math.round(W * 0.046));
-  ctx.font = `900 ${aFsz}px Inter,system-ui`; aLines.forEach((line, i) => ctx.fillText(line, 350, 200 + i * (aFsz + 6))); ctx.restore();
+  const { lines: aLines, sz: aFsz } = wrapAwardText(ctx, awardType.toUpperCase(), cardW - splitW - W * 0.08, Math.round(W * 0.046));
+  ctx.font = `900 ${aFsz}px Inter,system-ui`; aLines.forEach((line, i) => ctx.fillText(line, rightStart, cY + cardH * 0.12 + i * (aFsz + 6))); ctx.restore();
+  
   ctx.save(); ctx.textAlign = "left"; ctx.textBaseline = "top"; ctx.fillStyle = "#111827";
-  const nFsz = autoFit(ctx, name || "Your Name", 330, Math.round(W * 0.045), 20);
-  ctx.font = `700 ${nFsz}px Inter,system-ui`; ctx.fillText(name || "Your Name", 350, 360);
+  const nFsz = autoFit(ctx, name || "Your Name", cardW - splitW - W * 0.08, Math.round(W * 0.045), 20);
+  ctx.font = `700 ${nFsz}px Inter,system-ui`; ctx.fillText(name || "Your Name", rightStart, cY + cardH * 0.45);
   ctx.font = `400 ${Math.round(W * 0.022)}px Inter,system-ui`; ctx.fillStyle = "rgba(17,24,39,0.5)";
-  ctx.fillText(role || "Department · Role", 350, 360 + nFsz + 8); ctx.restore();
+  ctx.fillText(role || "Department · Role", rightStart, cY + cardH * 0.45 + nFsz + 8); ctx.restore();
+  
   if (orgName) {
     ctx.save(); ctx.textAlign = "left"; ctx.font = `700 ${Math.round(W * 0.022)}px Inter,system-ui`;
-    ctx.fillStyle = "rgba(17,24,39,0.3)"; ctx.fillText(orgName, 350, 610); ctx.restore();
+    ctx.fillStyle = "rgba(17,24,39,0.3)"; ctx.fillText(orgName, rightStart, cY + cardH - 30); ctx.restore();
   }
   if (tagline) {
     ctx.save(); ctx.textAlign = "center"; ctx.font = `400 ${Math.round(W * 0.021)}px Inter,system-ui`;
@@ -147,33 +252,44 @@ function tGlowFrame(ctx: CanvasRenderingContext2D, W: number, H: number, o: Rend
   const bgGrad = ctx.createLinearGradient(0, 0, W, H);
   bgGrad.addColorStop(0, shade(bg, 18)); bgGrad.addColorStop(1, bg);
   ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, W, H);
-  const cX = W / 2, cardW = 600, cardH = 540;
+  
+  const cX = W / 2, cardW = W * 0.75, cardH = H * 0.68;
+  const cardY = H * 0.16;
+  const rad = Math.min(W, H) * 0.03;
+  
   ctx.save(); ctx.shadowColor = primary; ctx.shadowBlur = 24;
-  rrect(ctx, cX - cardW / 2, 140, cardW, cardH, 24); ctx.fillStyle = "#0c0d14"; ctx.fill();
+  rrect(ctx, cX - cardW / 2, cardY, cardW, cardH, rad); ctx.fillStyle = "#0c0d14"; ctx.fill();
   ctx.strokeStyle = primary; ctx.lineWidth = 3; ctx.stroke(); ctx.restore();
+  
   if (logoImg) {
     ctx.save(); const lw = Math.round(W * 0.12), lh = logoImg.naturalHeight * (lw / logoImg.naturalWidth);
-    ctx.drawImage(logoImg, cX - lw / 2, 175, lw, lh); ctx.restore();
+    ctx.drawImage(logoImg, cX - lw / 2, cardY + cardH * 0.06, lw, lh); ctx.restore();
   } else if (orgName) {
     ctx.save(); ctx.textAlign = "center"; ctx.font = `800 ${Math.round(W * 0.024)}px Inter,system-ui`;
-    ctx.fillStyle = "rgba(255,255,255,0.4)"; ctx.fillText(orgName.toUpperCase(), cX, 195); ctx.restore();
+    ctx.fillStyle = "rgba(255,255,255,0.4)"; ctx.fillText(orgName.toUpperCase(), cX, cardY + cardH * 0.1); ctx.restore();
   }
-  const pW = 150, pH = 190;
+  
+  const pW = W * 0.18, pH = H * 0.24;
+  const pCy = cardY + cardH * 0.35;
   ctx.save(); ctx.shadowColor = primary + "88"; ctx.shadowBlur = 16;
-  rrect(ctx, cX - pW / 2 - 4, 330 - pH / 2 - 4, pW + 8, pH + 8, 16);
+  rrect(ctx, cX - pW / 2 - 4, pCy - pH / 2 - 4, pW + 8, pH + 8, 16);
   ctx.strokeStyle = primary; ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
-  drawPhoto(ctx, photo, cX, 330, pW / 2, pH / 2, tf, "rrect");
+  drawPhoto(ctx, photo, cX, pCy, pW / 2, pH / 2, tf, "rrect");
+  
   ctx.save(); ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.fillStyle = "#ffffff";
+  const nameY = pCy + pH / 2 + 30;
   const nFsz = autoFit(ctx, name || "Your Name", cardW * 0.8, Math.round(W * 0.045), 20);
-  ctx.font = `700 ${nFsz}px Inter,system-ui`; ctx.fillText(name || "Your Name", cX, 475);
+  ctx.font = `700 ${nFsz}px Inter,system-ui`; ctx.fillText(name || "Your Name", cX, nameY);
   ctx.font = `500 ${Math.round(W * 0.022)}px Inter,system-ui`; ctx.fillStyle = primary;
-  ctx.fillText(role || "Department · Role", cX, 475 + nFsz + 8); ctx.restore();
+  ctx.fillText(role || "Department · Role", cX, nameY + nFsz + 8); ctx.restore();
+  
   ctx.save(); ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.fillStyle = secondary || "#ffffff";
   const { lines: aLines, sz: aFsz } = wrapAwardText(ctx, awardType.toUpperCase(), cardW * 0.88, Math.round(W * 0.046));
-  ctx.font = `900 ${aFsz}px Inter,system-ui`; aLines.forEach((line, i) => ctx.fillText(line, cX, 585 + i * (aFsz + 4))); ctx.restore();
+  ctx.font = `900 ${aFsz}px Inter,system-ui`; aLines.forEach((line, i) => ctx.fillText(line, cX, nameY + nFsz + 50 + i * (aFsz + 4))); ctx.restore();
+  
   if (periodLabel) {
     ctx.save(); ctx.textAlign = "center"; ctx.font = `600 italic ${Math.round(W * 0.022)}px Georgia,serif`;
-    ctx.fillStyle = "rgba(255,255,255,0.7)"; ctx.fillText(periodLabel, cX, 635); ctx.restore();
+    ctx.fillStyle = "rgba(255,255,255,0.7)"; ctx.fillText(periodLabel, cX, cardY + cardH - 40); ctx.restore();
   }
   if (tagline) {
     ctx.save(); ctx.textAlign = "center"; ctx.font = `400 ${Math.round(W * 0.021)}px Inter,system-ui`;
@@ -190,34 +306,47 @@ function tElegantClassic(ctx: CanvasRenderingContext2D, W: number, H: number, o:
     ctx.beginPath(); ctx.arc(x, y, 1, 0, Math.PI * 2); ctx.fill();
   }
   ctx.restore();
-  const cX = W / 2, cardW = 620, cardH = 540;
+  
+  const cX = W / 2, cardW = W * 0.78, cardH = H * 0.68;
+  const cardY = H * 0.16;
+  const rad = Math.min(W, H) * 0.03;
+  const leftMargin = cX - cardW / 2 + W * 0.06;
+  
   ctx.save(); ctx.shadowColor = "rgba(0,0,0,0.05)"; ctx.shadowBlur = 28;
-  rrect(ctx, cX - cardW / 2, 140, cardW, cardH, 24); ctx.fillStyle = "#ffffff"; ctx.fill();
+  rrect(ctx, cX - cardW / 2, cardY, cardW, cardH, rad); ctx.fillStyle = "#ffffff"; ctx.fill();
   ctx.strokeStyle = "rgba(0,0,0,0.08)"; ctx.lineWidth = 1.5; ctx.stroke(); ctx.restore();
+  
   if (logoImg) {
     ctx.save(); const lw = Math.round(W * 0.12), lh = logoImg.naturalHeight * (lw / logoImg.naturalWidth);
-    ctx.drawImage(logoImg, 150, 180, lw, lh); ctx.restore();
+    ctx.drawImage(logoImg, leftMargin, cardY + cardH * 0.08, lw, lh); ctx.restore();
   } else if (orgName) {
     ctx.save(); ctx.textAlign = "left"; ctx.font = `800 ${Math.round(W * 0.024)}px Inter,system-ui`;
-    ctx.fillStyle = "rgba(17,24,39,0.7)"; ctx.fillText(orgName.toUpperCase(), 150, 195); ctx.restore();
+    ctx.fillStyle = "rgba(17,24,39,0.7)"; ctx.fillText(orgName.toUpperCase(), leftMargin, cardY + cardH * 0.1); ctx.restore();
   }
-  const pR = 95;
+  
+  const pR = Math.min(W, H) * 0.12;
+  const pCx = cX + cardW / 2 - W * 0.11;
+  const pCy = cardY + cardH * 0.45;
+  
   ctx.save(); ctx.shadowColor = "rgba(0,0,0,0.15)"; ctx.shadowBlur = 24;
-  ctx.beginPath(); ctx.arc(530, 390, pR + 6, 0, Math.PI * 2); ctx.fillStyle = "#ffffff"; ctx.fill(); ctx.restore();
-  drawPhoto(ctx, photo, 530, 390, pR, pR, tf, "circle");
+  ctx.beginPath(); ctx.arc(pCx, pCy, pR + 6, 0, Math.PI * 2); ctx.fillStyle = "#ffffff"; ctx.fill(); ctx.restore();
+  drawPhoto(ctx, photo, pCx, pCy, pR, pR, tf, "circle");
   ctx.save(); ctx.strokeStyle = primary; ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.arc(530, 390, pR + 6, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+  ctx.beginPath(); ctx.arc(pCx, pCy, pR + 6, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+  
   ctx.save(); ctx.textAlign = "left"; ctx.textBaseline = "top"; ctx.fillStyle = primary;
-  const { lines: aLines, sz: aFsz } = wrapAwardText(ctx, awardType.toUpperCase(), 250, Math.round(W * 0.046));
-  ctx.font = `900 ${aFsz}px Inter,system-ui`; aLines.forEach((line, i) => ctx.fillText(line, 150, 270 + i * (aFsz + 6))); ctx.restore();
+  const { lines: aLines, sz: aFsz } = wrapAwardText(ctx, awardType.toUpperCase(), cardW * 0.5, Math.round(W * 0.046));
+  ctx.font = `900 ${aFsz}px Inter,system-ui`; aLines.forEach((line, i) => ctx.fillText(line, leftMargin, cardY + cardH * 0.25 + i * (aFsz + 6))); ctx.restore();
+  
   ctx.save(); ctx.textAlign = "left"; ctx.textBaseline = "top"; ctx.fillStyle = "#111827";
-  const nFsz = autoFit(ctx, name || "Your Name", 250, Math.round(W * 0.045), 20);
-  ctx.font = `700 ${nFsz}px Inter,system-ui`; ctx.fillText(name || "Your Name", 150, 400);
+  const nFsz = autoFit(ctx, name || "Your Name", cardW * 0.5, Math.round(W * 0.045), 20);
+  ctx.font = `700 ${nFsz}px Inter,system-ui`; ctx.fillText(name || "Your Name", leftMargin, pCy);
   ctx.font = `400 ${Math.round(W * 0.022)}px Inter,system-ui`; ctx.fillStyle = "rgba(17,24,39,0.5)";
-  ctx.fillText(role || "Department · Role", 150, 400 + nFsz + 8); ctx.restore();
+  ctx.fillText(role || "Department · Role", leftMargin, pCy + nFsz + 8); ctx.restore();
+  
   if (periodLabel) {
     ctx.save(); ctx.textAlign = "left"; ctx.font = `600 italic ${Math.round(W * 0.022)}px Georgia,serif`;
-    ctx.fillStyle = secondary || primary; ctx.fillText(periodLabel, 150, 510); ctx.restore();
+    ctx.fillStyle = secondary || primary; ctx.fillText(periodLabel, leftMargin, cardY + cardH - 50); ctx.restore();
   }
   if (tagline) {
     ctx.save(); ctx.textAlign = "center"; ctx.font = `400 ${Math.round(W * 0.021)}px Inter,system-ui`;
@@ -236,16 +365,16 @@ const TEMPLATES: { id: TemplateId; name: string; desc: string; emoji: string }[]
   { id: "elegant-classic", name: "Elegant Classic", desc: "Clean asymmetric style", emoji: "🏅" },
 ];
 
-function renderTemplate(id: TemplateId, canvas: HTMLCanvasElement, opts: RenderOpts) {
-  canvas.width = 800; canvas.height = 800;
+function renderTemplate(id: TemplateId, canvas: HTMLCanvasElement, opts: RenderOpts, W: number, H: number) {
+  canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
   ctx.imageSmoothingEnabled = true;
   (ctx as any).imageSmoothingQuality = "high";
-  if (id === "modern-stack") tModernStack(ctx, 800, 800, opts);
-  if (id === "minimal-split") tMinimalSplit(ctx, 800, 800, opts);
-  if (id === "glow-frame") tGlowFrame(ctx, 800, 800, opts);
-  if (id === "elegant-classic") tElegantClassic(ctx, 800, 800, opts);
+  if (id === "modern-stack") tModernStack(ctx, W, H, opts);
+  if (id === "minimal-split") tMinimalSplit(ctx, W, H, opts);
+  if (id === "glow-frame") tGlowFrame(ctx, W, H, opts);
+  if (id === "elegant-classic") tElegantClassic(ctx, W, H, opts);
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -258,6 +387,7 @@ export default function TopPerformerCardMaker() {
   const [imgVersion, setImgVersion] = useState(0);
   const [tab, setTab] = useState<"template" | "content" | "style">("template");
   const [templateId, setTemplateId] = useState<TemplateId>("modern-stack");
+  const [ratio, setRatio] = useState<"1:1" | "4:5" | "16:9" | "9:16">("1:1");
 
   const [awardType, setAwardType] = useState("Employee of the Month");
   const [periodType, setPeriodType] = useState<"week" | "month" | "year" | "custom">("month");
@@ -281,11 +411,19 @@ export default function TopPerformerCardMaker() {
 
   const opts: RenderOpts = { photo: photoRef.current, logoImg, tf, name, role, awardType, periodLabel, tagline, orgName, primary, secondary, bg, txt };
 
+  const dimMap: Record<string, [number, number]> = {
+    "1:1": [800, 800],
+    "4:5": [800, 1000],
+    "16:9": [1200, 675],
+    "9:16": [1080, 1920]
+  };
+  const [targetW, targetH] = dimMap[ratio];
+
   const draw = useCallback(() => {
     if (!canvasRef.current) return;
-    renderTemplate(templateId, canvasRef.current, opts);
+    renderTemplate(templateId, canvasRef.current, opts, targetW, targetH);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [templateId, logoImg, tf, name, role, awardType, periodLabel, tagline, orgName, primary, secondary, bg, txt, imgVersion]);
+  }, [templateId, logoImg, tf, name, role, awardType, periodLabel, tagline, orgName, primary, secondary, bg, txt, imgVersion, targetW, targetH]);
 
   useEffect(() => { draw(); }, [draw]);
 
@@ -391,8 +529,18 @@ export default function TopPerformerCardMaker() {
 
               {/* ── Template Tab ── */}
               {tab === "template" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <p style={{ fontSize: 10, letterSpacing: "0.15em", fontWeight: 700, color: "rgba(255,255,255,0.2)", textTransform: "uppercase", marginBottom: 8 }}>Choose a Layout</p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <p style={{ fontSize: 10, letterSpacing: "0.15em", fontWeight: 700, color: "rgba(255,255,255,0.2)", textTransform: "uppercase", marginBottom: 4 }}>Aspect Ratio</p>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      {(["1:1", "4:5", "16:9", "9:16"] as const).map(r => (
+                        <Pill key={r} active={ratio === r} onClick={() => setRatio(r as any)} label={r === "1:1" ? "Square (1:1)" : r === "4:5" ? "Portrait (4:5)" : r === "16:9" ? "Landscape (16:9)" : "Story (9:16)"} />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <p style={{ fontSize: 10, letterSpacing: "0.15em", fontWeight: 700, color: "rgba(255,255,255,0.2)", textTransform: "uppercase", marginBottom: 8 }}>Choose a Layout</p>
                   {TEMPLATES.map(t => (
                     <button key={t.id} className={`tmpl-card ${templateId === t.id ? "active" : "inactive"}`} onClick={() => setTemplateId(t.id)}>
                       <span style={{ fontSize: 22, lineHeight: 1 }}>{t.emoji}</span>
@@ -408,6 +556,7 @@ export default function TopPerformerCardMaker() {
                   <p style={{ fontSize: 11, color: "rgba(255,255,255,0.18)", marginTop: 8, lineHeight: 1.5 }}>
                     Your edits are preserved when switching.
                   </p>
+                  </div>
                 </div>
               )}
 
@@ -551,14 +700,14 @@ export default function TopPerformerCardMaker() {
             <div style={{ ...panel, padding: 16 }}>
               <p style={{ fontSize: 10, letterSpacing: "0.15em", fontWeight: 700, color: "rgba(255,255,255,0.2)", textTransform: "uppercase", marginBottom: 12 }}>Export</p>
 
-              <button className="dl-btn" onClick={() => dl(`${slug}-award.png`, c => renderTemplate(templateId, c, opts))} style={{
+              <button className="dl-btn" onClick={() => dl(`${slug}-award.png`, c => renderTemplate(templateId, c, opts, targetW, targetH))} style={{
                 background: `linear-gradient(135deg, ${primary}, ${secondary || primary})`, color: "#fff",
                 boxShadow: `0 4px 14px ${primary}44`, marginBottom: 8,
               }}
                 onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.filter = "brightness(1.12)"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.filter = "none"; }}
               >
-                <span>↓</span> Square Award Card (800×800)
+                <span>↓</span> Download Image ({targetW}×{targetH})
               </button>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
